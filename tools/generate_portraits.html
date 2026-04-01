@@ -1,0 +1,2363 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>三国志英杰传 - 武将肖像生成器</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #1a1a2e;
+  color: #e0d6c8;
+  font-family: 'SimSun', 'STSong', serif;
+  min-height: 100vh;
+}
+.header {
+  text-align: center;
+  padding: 30px 20px 20px;
+  background: linear-gradient(180deg, #2a1a0a 0%, #1a1a2e 100%);
+  border-bottom: 2px solid #8b7355;
+}
+.header h1 {
+  font-size: 28px;
+  color: #daa520;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+  margin-bottom: 8px;
+}
+.header p { color: #a09080; font-size: 14px; }
+.controls {
+  text-align: center;
+  padding: 20px;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 10px 24px;
+  font-size: 16px;
+  font-family: inherit;
+  border: 2px solid #8b7355;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-primary {
+  background: linear-gradient(180deg, #daa520, #b8860b);
+  color: #1a1a2e;
+  font-weight: bold;
+}
+.btn-primary:hover { background: linear-gradient(180deg, #f0c040, #daa520); }
+.btn-secondary {
+  background: linear-gradient(180deg, #3a3a5e, #2a2a4e);
+  color: #daa520;
+}
+.btn-secondary:hover { background: linear-gradient(180deg, #4a4a6e, #3a3a5e); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.progress-bar {
+  margin: 0 auto 20px;
+  max-width: 600px;
+  height: 24px;
+  background: #2a2a4e;
+  border: 1px solid #8b7355;
+  border-radius: 4px;
+  overflow: hidden;
+  display: none;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #daa520, #f0c040);
+  width: 0%;
+  transition: width 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: #1a1a2e;
+  font-weight: bold;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 16px;
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+.card {
+  background: #2a2a3e;
+  border: 1px solid #5a5a7a;
+  border-radius: 6px;
+  padding: 10px;
+  text-align: center;
+  transition: transform 0.15s;
+}
+.card:hover { transform: translateY(-2px); border-color: #daa520; }
+.card canvas {
+  display: block;
+  margin: 0 auto 8px;
+  border: 1px solid #4a4a6a;
+  image-rendering: pixelated;
+}
+.card .name {
+  font-size: 14px;
+  color: #daa520;
+  margin-bottom: 4px;
+}
+.card .id-text {
+  font-size: 11px;
+  color: #808090;
+  margin-bottom: 6px;
+}
+.card .dl-btn {
+  font-size: 11px;
+  padding: 3px 10px;
+  background: #3a3a5e;
+  color: #c0b090;
+  border: 1px solid #5a5a7a;
+  border-radius: 3px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.card .dl-btn:hover { background: #4a4a6e; color: #daa520; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>三国志英杰传 - 武将肖像生成器</h1>
+  <p>生成全部301位武将的128x128像素肖像画（含新增134名）</p>
+</div>
+
+<div class="controls">
+  <button class="btn btn-primary" id="btnGenerate" onclick="generateAll()">生成全部肖像</button>
+  <button class="btn btn-secondary" id="btnDownloadNew" onclick="downloadNew()">仅下载新增134名 (ZIP)</button>
+  <button class="btn btn-secondary" id="btnDownloadAll" onclick="downloadAll()" disabled>下载全部 (ZIP)</button>
+</div>
+
+<div class="progress-bar" id="progressBar">
+  <div class="progress-fill" id="progressFill">0%</div>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<script>
+// ==================== GENERALS DATA ====================
+const GENERALS = [
+  {id:'cao_cao',name:'曹操',portrait:{hair:'short',face:'square',armor:'heavy',color:'#1a3a6b'},stats:{war:72,int:91}},
+  {id:'xiahou_dun',name:'夏侯惇',portrait:{hair:'short',face:'square',armor:'heavy',color:'#2b4a7a'},stats:{war:90,int:52}},
+  {id:'xiahou_yuan',name:'夏侯渊',portrait:{hair:'short',face:'long',armor:'heavy',color:'#2b4a7a'},stats:{war:88,int:48}},
+  {id:'cao_ren',name:'曹仁',portrait:{hair:'bun',face:'square',armor:'heavy',color:'#1a3a6b'},stats:{war:82,int:58}},
+  {id:'cao_hong',name:'曹洪',portrait:{hair:'short',face:'round',armor:'heavy',color:'#1a3a6b'},stats:{war:78,int:42}},
+  {id:'xun_yu',name:'荀彧',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#4a6fa5'},stats:{war:29,int:95}},
+  {id:'xun_you',name:'荀攸',portrait:{hair:'bun',face:'long',armor:'robe',color:'#4a6fa5'},stats:{war:25,int:93}},
+  {id:'guo_jia',name:'郭嘉',portrait:{hair:'long',face:'thin',armor:'robe',color:'#5a7fba'},stats:{war:18,int:97}},
+  {id:'cheng_yu',name:'程昱',portrait:{hair:'bun',face:'long',armor:'robe',color:'#3a5a8a'},stats:{war:40,int:90}},
+  {id:'yu_jin',name:'于禁',portrait:{hair:'short',face:'square',armor:'heavy',color:'#2b4a7a'},stats:{war:78,int:62}},
+  {id:'yue_jin',name:'乐进',portrait:{hair:'short',face:'round',armor:'medium',color:'#2b4a7a'},stats:{war:82,int:50}},
+  {id:'li_dian',name:'李典',portrait:{hair:'bun',face:'round',armor:'medium',color:'#3a5a8a'},stats:{war:76,int:68}},
+  {id:'dian_wei',name:'典韦',portrait:{hair:'wild',face:'square',armor:'heavy',color:'#2a2a3a'},stats:{war:97,int:22}},
+  {id:'xu_chu',name:'许褚',portrait:{hair:'wild',face:'square',armor:'heavy',color:'#3a3a4a'},stats:{war:96,int:20}},
+  {id:'zhang_liao_cc',name:'张辽',portrait:{hair:'bun',face:'square',armor:'heavy',color:'#1a3a6b'},stats:{war:92,int:72}},
+  {id:'liu_bei',name:'刘备',portrait:{hair:'bun',face:'long',armor:'medium',color:'#6b8e23'},stats:{war:65,int:72}},
+  {id:'guan_yu',name:'关羽',portrait:{hair:'long',face:'long',armor:'heavy',color:'#228b22'},stats:{war:97,int:70}},
+  {id:'zhang_fei',name:'张飞',portrait:{hair:'wild',face:'round',armor:'heavy',color:'#2e5a1e'},stats:{war:98,int:36}},
+  {id:'zhao_yun',name:'赵云',portrait:{hair:'bun',face:'square',armor:'heavy',color:'#c0c0c0'},stats:{war:96,int:68}},
+  {id:'zhuge_liang',name:'诸葛亮',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#f5f5dc'},stats:{war:32,int:100}},
+  {id:'huang_zhong',name:'黄忠',portrait:{hair:'bald',face:'square',armor:'heavy',color:'#8b7d3c'},stats:{war:92,int:42}},
+  {id:'ma_chao',name:'马超',portrait:{hair:'long',face:'square',armor:'heavy',color:'#e0e0e0'},stats:{war:96,int:40}},
+  {id:'wei_yan',name:'魏延',portrait:{hair:'wild',face:'square',armor:'heavy',color:'#4a6b3a'},stats:{war:90,int:52}},
+  {id:'pang_tong',name:'庞统',portrait:{hair:'bun',face:'round',armor:'robe',color:'#8b6914'},stats:{war:28,int:96}},
+  {id:'fa_zheng',name:'法正',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#6b8e23'},stats:{war:22,int:92}},
+  {id:'jiang_wan',name:'蒋琬',portrait:{hair:'bun',face:'round',armor:'robe',color:'#556b2f'},stats:{war:24,int:78}},
+  {id:'ma_su',name:'马谡',portrait:{hair:'bun',face:'thin',armor:'light',color:'#6b8e23'},stats:{war:38,int:75}},
+  {id:'sun_quan',name:'孙权',portrait:{hair:'bun',face:'square',armor:'medium',color:'#b22222'},stats:{war:62,int:80}},
+  {id:'zhou_yu_sq',name:'周瑜',portrait:{hair:'long',face:'thin',armor:'medium',color:'#c41e3a'},stats:{war:68,int:96}},
+  {id:'lu_su',name:'鲁肃',portrait:{hair:'bun',face:'round',armor:'robe',color:'#a52a2a'},stats:{war:38,int:88}},
+  {id:'lv_meng',name:'吕蒙',portrait:{hair:'short',face:'square',armor:'heavy',color:'#b22222'},stats:{war:78,int:82}},
+  {id:'gan_ning',name:'甘宁',portrait:{hair:'wild',face:'square',armor:'medium',color:'#8b0000'},stats:{war:92,int:42}},
+  {id:'huang_gai',name:'黄盖',portrait:{hair:'bald',face:'square',armor:'heavy',color:'#a52a2a'},stats:{war:80,int:58}},
+  {id:'cheng_pu',name:'程普',portrait:{hair:'short',face:'round',armor:'heavy',color:'#a52a2a'},stats:{war:78,int:55}},
+  {id:'zhou_tai',name:'周泰',portrait:{hair:'short',face:'square',armor:'heavy',color:'#8b0000'},stats:{war:88,int:32}},
+  {id:'taishi_ci',name:'太史慈',portrait:{hair:'bun',face:'long',armor:'heavy',color:'#c41e3a'},stats:{war:92,int:48}},
+  {id:'ling_tong',name:'凌统',portrait:{hair:'long',face:'thin',armor:'medium',color:'#b22222'},stats:{war:85,int:48}},
+  {id:'xu_sheng',name:'徐盛',portrait:{hair:'short',face:'long',armor:'medium',color:'#a52a2a'},stats:{war:78,int:58}},
+  {id:'ding_feng',name:'丁奉',portrait:{hair:'short',face:'round',armor:'medium',color:'#c41e3a'},stats:{war:82,int:52}},
+  {id:'yuan_shao',name:'袁绍',portrait:{hair:'bun',face:'round',armor:'heavy',color:'#daa520'},stats:{war:52,int:62}},
+  {id:'yan_liang',name:'颜良',portrait:{hair:'wild',face:'square',armor:'heavy',color:'#b8860b'},stats:{war:93,int:28}},
+  {id:'wen_chou',name:'文丑',portrait:{hair:'wild',face:'round',armor:'heavy',color:'#b8860b'},stats:{war:92,int:26}},
+  {id:'zhang_he_ys',name:'张郃',portrait:{hair:'bun',face:'long',armor:'heavy',color:'#daa520'},stats:{war:86,int:62}},
+  {id:'gao_lan',name:'高览',portrait:{hair:'short',face:'square',armor:'heavy',color:'#cd950c'},stats:{war:82,int:40}},
+  {id:'ju_shou',name:'沮授',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#c4a000'},stats:{war:32,int:90}},
+  {id:'tian_feng',name:'田丰',portrait:{hair:'bun',face:'long',armor:'robe',color:'#c4a000'},stats:{war:28,int:92}},
+  {id:'shen_pei',name:'审配',portrait:{hair:'bun',face:'round',armor:'robe',color:'#b8860b'},stats:{war:42,int:72}},
+  {id:'lv_bu',name:'吕布',portrait:{hair:'long',face:'square',armor:'heavy',color:'#800080'},stats:{war:100,int:30}},
+  {id:'chen_gong',name:'陈宫',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#6a0dad'},stats:{war:32,int:88}},
+  {id:'gao_shun',name:'高顺',portrait:{hair:'short',face:'square',armor:'heavy',color:'#4b0082'},stats:{war:82,int:58}},
+  {id:'zhang_liao_lb',name:'张辽',portrait:{hair:'bun',face:'square',armor:'heavy',color:'#6a0dad'},stats:{war:90,int:70}},
+  {id:'dong_zhuo',name:'董卓',portrait:{hair:'bald',face:'round',armor:'heavy',color:'#4a0000'},stats:{war:68,int:42}},
+  {id:'lv_bu_dz',name:'吕布',portrait:{hair:'long',face:'square',armor:'heavy',color:'#800080'},stats:{war:100,int:28}},
+  {id:'li_jue',name:'李傕',portrait:{hair:'short',face:'thin',armor:'medium',color:'#5c0000'},stats:{war:78,int:38}},
+  {id:'guo_si',name:'郭汜',portrait:{hair:'wild',face:'thin',armor:'medium',color:'#5c0000'},stats:{war:76,int:32}},
+  {id:'hua_xiong',name:'华雄',portrait:{hair:'wild',face:'square',armor:'heavy',color:'#4a0000'},stats:{war:88,int:28}},
+  {id:'liu_biao',name:'刘表',portrait:{hair:'bun',face:'round',armor:'robe',color:'#2f4f4f'},stats:{war:38,int:68}},
+  {id:'cai_mao',name:'蔡瑁',portrait:{hair:'bun',face:'thin',armor:'medium',color:'#3a6b5a'},stats:{war:55,int:62}},
+  {id:'huang_zu',name:'黄祖',portrait:{hair:'short',face:'round',armor:'medium',color:'#2f4f4f'},stats:{war:58,int:42}},
+  {id:'wen_pin',name:'文聘',portrait:{hair:'short',face:'square',armor:'heavy',color:'#4a6b5a'},stats:{war:80,int:52}},
+  {id:'kuai_liang',name:'蒯良',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#3a6b5a'},stats:{war:22,int:80}},
+  {id:'sun_ce',name:'孙策',portrait:{hair:'long',face:'square',armor:'heavy',color:'#dc143c'},stats:{war:92,int:68}},
+  {id:'zhou_yu_sc',name:'周瑜',portrait:{hair:'long',face:'thin',armor:'medium',color:'#c41e3a'},stats:{war:66,int:95}},
+  {id:'jiang_qin',name:'蒋钦',portrait:{hair:'short',face:'round',armor:'medium',color:'#b22222'},stats:{war:78,int:42}},
+  {id:'chen_wu',name:'陈武',portrait:{hair:'short',face:'square',armor:'heavy',color:'#dc143c'},stats:{war:80,int:35}},
+  {id:'pang_de',name:'庞德',portrait:{hair:'short',face:'square',armor:'heavy',color:'#696969'},stats:{war:92,int:38}},
+  {id:'zhang_ren',name:'张任',portrait:{hair:'bun',face:'long',armor:'medium',color:'#808080'},stats:{war:82,int:55}},
+  {id:'yan_yan',name:'严颜',portrait:{hair:'bald',face:'round',armor:'heavy',color:'#708090'},stats:{war:80,int:52}},
+  {id:'xu_shu',name:'徐庶',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#d2b48c'},stats:{war:55,int:90}},
+  {id:'jiang_wei',name:'姜维',portrait:{hair:'bun',face:'long',armor:'heavy',color:'#a0a0a0'},stats:{war:90,int:88}},
+  {id:'deng_ai',name:'邓艾',portrait:{hair:'short',face:'square',armor:'heavy',color:'#778899'},stats:{war:85,int:90}},
+  {id:'zhong_hui',name:'钟会',portrait:{hair:'bun',face:'thin',armor:'medium',color:'#6a6a8a'},stats:{war:68,int:92}},
+  {id:'lu_xun',name:'陆逊',portrait:{hair:'long',face:'thin',armor:'light',color:'#c0c0c0'},stats:{war:58,int:94}},
+  {id:'guan_ping',name:'关平',portrait:{hair:'bun',face:'long',armor:'heavy',color:'#5a8a5a'},stats:{war:82,int:52}},
+  {id:'guan_xing',name:'关兴',portrait:{hair:'long',face:'long',armor:'heavy',color:'#5a8a5a'},stats:{war:85,int:55}},
+  {id:'zhang_bao',name:'张苞',portrait:{hair:'wild',face:'round',armor:'heavy',color:'#5a8a5a'},stats:{war:86,int:35}},
+  {id:'wang_ping',name:'王平',portrait:{hair:'short',face:'square',armor:'medium',color:'#808080'},stats:{war:72,int:62}},
+  {id:'liao_hua',name:'廖化',portrait:{hair:'short',face:'round',armor:'medium',color:'#6b8e6b'},stats:{war:72,int:48}},
+  {id:'xiang_yu',name:'项羽',portrait:{hair:'wild',face:'square',armor:'heavy',color:'#8b0000'},stats:{war:101,int:38}},
+  {id:'long_ju',name:'龙且',portrait:{hair:'wild',face:'square',armor:'heavy',color:'#a52a2a'},stats:{war:92,int:32}},
+  {id:'zhongli_mei',name:'钟离昧',portrait:{hair:'short',face:'long',armor:'heavy',color:'#8b4513'},stats:{war:88,int:45}},
+  {id:'fan_zeng',name:'范增',portrait:{hair:'bald',face:'thin',armor:'robe',color:'#4a3728'},stats:{war:28,int:94}},
+  {id:'bu_zhi',name:'步骘',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#a52a2a'},stats:{war:30,int:78}},
+  {id:'cao_pi',name:'曹丕',portrait:{hair:'bun',face:'thin',armor:'medium',color:'#2b4a7a'},stats:{war:62,int:80}},
+  {id:'cao_zhang',name:'曹彰',portrait:{hair:'wild',face:'square',armor:'heavy',color:'#1a3a6b'},stats:{war:90,int:32}},
+  {id:'cao_chun',name:'曹纯',portrait:{hair:'short',face:'square',armor:'heavy',color:'#2b4a7a'},stats:{war:82,int:50}},
+  {id:'cao_xiu',name:'曹休',portrait:{hair:'short',face:'long',armor:'heavy',color:'#2b4a7a'},stats:{war:80,int:55}},
+  {id:'chen_qun',name:'陈群',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#3a5a3a'},stats:{war:28,int:82}},
+  {id:'dong_yun',name:'董允',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#3a5a3a'},stats:{war:30,int:80}},
+  {id:'fu_tong',name:'傅彤',portrait:{hair:'short',face:'square',armor:'medium',color:'#6b5a3a'},stats:{war:75,int:42}},
+  {id:'han_dang',name:'韩当',portrait:{hair:'short',face:'round',armor:'medium',color:'#4a6a6a'},stats:{war:78,int:48}},
+  {id:'han_sui',name:'韩遂',portrait:{hair:'bun',face:'long',armor:'medium',color:'#6a5a4a'},stats:{war:72,int:65}},
+  {id:'he_qi',name:'贺齐',portrait:{hair:'short',face:'square',armor:'medium',color:'#4a6a4a'},stats:{war:80,int:55}},
+  {id:'hou_cheng',name:'侯成',portrait:{hair:'short',face:'round',armor:'medium',color:'#5a5a4a'},stats:{war:68,int:30}},
+  {id:'jia_xu',name:'贾诩',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#4a3a5a'},stats:{war:35,int:96}},
+  {id:'jin_xuan',name:'金旋',portrait:{hair:'bun',face:'round',armor:'robe',color:'#6a5a3a'},stats:{war:50,int:55}},
+  {id:'kong_rong',name:'孔融',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#5a4a3a'},stats:{war:20,int:78}},
+  {id:'le_jin',name:'乐进',portrait:{hair:'short',face:'square',armor:'heavy',color:'#2b4a7a'},stats:{war:88,int:42}},
+  {id:'li_yan',name:'李严',portrait:{hair:'bun',face:'square',armor:'medium',color:'#3a5a3a'},stats:{war:75,int:72}},
+  {id:'liu_feng',name:'刘封',portrait:{hair:'short',face:'square',armor:'heavy',color:'#5a8a5a'},stats:{war:80,int:42}},
+  {id:'liu_zhang',name:'刘璋',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#6a5a3a'},stats:{war:35,int:52}},
+  {id:'lu_meng',name:'吕蒙',portrait:{hair:'bun',face:'long',armor:'medium',color:'#4a6a6a'},stats:{war:82,int:85}},
+  {id:'ma_dai',name:'马岱',portrait:{hair:'short',face:'long',armor:'heavy',color:'#8a4a2a'},stats:{war:82,int:55}},
+  {id:'ma_liang',name:'马良',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#3a5a3a'},stats:{war:32,int:90}},
+  {id:'man_chong',name:'满宠',portrait:{hair:'bun',face:'square',armor:'medium',color:'#2b4a7a'},stats:{war:68,int:80}},
+  {id:'meng_da',name:'孟达',portrait:{hair:'bun',face:'long',armor:'medium',color:'#5a5a4a'},stats:{war:65,int:72}},
+  {id:'meng_huo',name:'孟获',portrait:{hair:'wild',face:'square',armor:'medium',color:'#6a3a2a'},stats:{war:85,int:45}},
+  {id:'pan_zhang',name:'潘璋',portrait:{hair:'short',face:'round',armor:'medium',color:'#4a6a6a'},stats:{war:78,int:45}},
+  {id:'sima_shi',name:'司马师',portrait:{hair:'bun',face:'long',armor:'medium',color:'#3a3a5a'},stats:{war:78,int:88}},
+  {id:'sima_zhao',name:'司马昭',portrait:{hair:'bun',face:'thin',armor:'medium',color:'#3a3a5a'},stats:{war:72,int:88}},
+  {id:'tai_shi_ci',name:'太史慈',portrait:{hair:'long',face:'long',armor:'heavy',color:'#4a6a6a'},stats:{war:95,int:60}},
+  {id:'wang_yi',name:'王异',portrait:{hair:'long',face:'thin',armor:'medium',color:'#8a4a6a'},stats:{war:75,int:70}},
+  {id:'wu_yi',name:'吴懿',portrait:{hair:'bun',face:'square',armor:'medium',color:'#3a5a3a'},stats:{war:78,int:60}},
+  {id:'xia_hou_ba',name:'夏侯霸',portrait:{hair:'wild',face:'square',armor:'heavy',color:'#2b4a7a'},stats:{war:82,int:48}},
+  {id:'xia_hou_yuan',name:'夏侯渊',portrait:{hair:'short',face:'square',armor:'heavy',color:'#2b4a7a'},stats:{war:92,int:50}},
+  {id:'xu_huang',name:'徐晃',portrait:{hair:'short',face:'square',armor:'heavy',color:'#2b4a7a'},stats:{war:90,int:60}},
+  {id:'xu_zhu',name:'许褚',portrait:{hair:'bald',face:'square',armor:'heavy',color:'#3a3a3a'},stats:{war:98,int:20}},
+  {id:'yuan_shu',name:'袁术',portrait:{hair:'bun',face:'round',armor:'robe',color:'#8a6a2a'},stats:{war:42,int:45}},
+  {id:'zhang_he',name:'张郃',portrait:{hair:'short',face:'long',armor:'heavy',color:'#2b4a7a'},stats:{war:92,int:70}},
+  {id:'zhang_liao',name:'张辽',portrait:{hair:'long',face:'long',armor:'heavy',color:'#2b4a7a'},stats:{war:95,int:72}},
+  {id:'zhang_lu',name:'张鲁',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#5a4a3a'},stats:{war:45,int:62}},
+  {id:'zhang_song',name:'张松',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#5a5a4a'},stats:{war:18,int:82}},
+  {id:'zhou_yu',name:'周瑜',portrait:{hair:'bun',face:'long',armor:'medium',color:'#4a6a6a'},stats:{war:72,int:98}},
+  {id:'zhuge_dan',name:'诸葛诞',portrait:{hair:'bun',face:'long',armor:'medium',color:'#4a4a6a'},stats:{war:72,int:80}},
+  {id:'zhuge_ke',name:'诸葛恪',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#a0a0c0'},stats:{war:52,int:85}},
+  {id:'chen_deng',name:'陈登',portrait:{hair:'bun',face:'long',armor:'robe',color:'#4a5a3a'},stats:{war:40,int:84}},
+  {id:'chunyu_qiong',name:'淳于琼',portrait:{hair:'short',face:'round',armor:'heavy',color:'#5a4a3a'},stats:{war:68,int:28}},
+  {id:'dailai_dongzhu',name:'带来洞主',portrait:{hair:'wild',face:'square',armor:'medium',color:'#6a3a2a'},stats:{war:80,int:35}},
+  {id:'fei_yi',name:'费祎',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#3a5a3a'},stats:{war:30,int:88}},
+  {id:'feng_ji',name:'逢纪',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#5a4a5a'},stats:{war:25,int:72}},
+  {id:'gongsun_zan',name:'公孙瓒',portrait:{hair:'long',face:'long',armor:'heavy',color:'#4a6a8a'},stats:{war:80,int:55}},
+  {id:'guan_suo',name:'关索',portrait:{hair:'long',face:'long',armor:'heavy',color:'#5a8a5a'},stats:{war:82,int:42}},
+  {id:'guo_huai',name:'郭淮',portrait:{hair:'short',face:'long',armor:'medium',color:'#2b4a7a'},stats:{war:78,int:72}},
+  {id:'han_xuan',name:'韩玄',portrait:{hair:'bun',face:'round',armor:'robe',color:'#6a5a4a'},stats:{war:45,int:50}},
+  {id:'huang_quan',name:'黄权',portrait:{hair:'bun',face:'square',armor:'medium',color:'#3a5a3a'},stats:{war:65,int:75}},
+  {id:'huangfu_song',name:'皇甫嵩',portrait:{hair:'bun',face:'long',armor:'heavy',color:'#5a5a8a'},stats:{war:82,int:70}},
+  {id:'ji_ling',name:'纪灵',portrait:{hair:'wild',face:'square',armor:'heavy',color:'#8a6a2a'},stats:{war:85,int:30}},
+  {id:'liu_qi',name:'刘琦',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#5a7a5a'},stats:{war:40,int:55}},
+  {id:'lv_fan',name:'吕范',portrait:{hair:'bun',face:'long',armor:'medium',color:'#4a6a6a'},stats:{war:55,int:72}},
+  {id:'ma_teng',name:'马腾',portrait:{hair:'long',face:'square',armor:'heavy',color:'#8a5a3a'},stats:{war:82,int:58}},
+  {id:'ma_xiu',name:'马岫',portrait:{hair:'short',face:'square',armor:'medium',color:'#8a4a2a'},stats:{war:72,int:40}},
+  {id:'mi_zhu',name:'糜竺',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#5a6a4a'},stats:{war:20,int:70}},
+  {id:'niu_fu',name:'牛辅',portrait:{hair:'short',face:'square',armor:'medium',color:'#5a3a3a'},stats:{war:65,int:30}},
+  {id:'niu_jin',name:'牛金',portrait:{hair:'short',face:'square',armor:'heavy',color:'#3a4a5a'},stats:{war:75,int:35}},
+  {id:'shi_xie',name:'士燮',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#4a5a6a'},stats:{war:42,int:78}},
+  {id:'sima_yi',name:'司马懿',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#3a3a5a'},stats:{war:52,int:98}},
+  {id:'tao_qian',name:'陶谦',portrait:{hair:'bald',face:'round',armor:'robe',color:'#6a5a4a'},stats:{war:35,int:65}},
+  {id:'tian_yu',name:'田豫',portrait:{hair:'short',face:'square',armor:'medium',color:'#3a5a4a'},stats:{war:75,int:65}},
+  {id:'wang_wei',name:'王威',portrait:{hair:'short',face:'square',armor:'medium',color:'#5a5a4a'},stats:{war:68,int:45}},
+  {id:'wen_yang',name:'文鸯',portrait:{hair:'wild',face:'square',armor:'heavy',color:'#4a3a5a'},stats:{war:93,int:40}},
+  {id:'wu_ban',name:'吴班',portrait:{hair:'short',face:'square',armor:'medium',color:'#5a8a5a'},stats:{war:72,int:50}},
+  {id:'wu_tugu',name:'兀突骨',portrait:{hair:'wild',face:'square',armor:'medium',color:'#4a3a2a'},stats:{war:95,int:20}},
+  {id:'xin_ping',name:'辛评',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#5a4a5a'},stats:{war:28,int:75}},
+  {id:'xu_rong',name:'徐荣',portrait:{hair:'short',face:'square',armor:'heavy',color:'#4a3a4a'},stats:{war:80,int:45}},
+  {id:'yan_gang',name:'严纲',portrait:{hair:'short',face:'square',armor:'heavy',color:'#4a6a8a'},stats:{war:75,int:38}},
+  {id:'yang_feng',name:'杨奉',portrait:{hair:'short',face:'round',armor:'medium',color:'#5a5a3a'},stats:{war:72,int:35}},
+  {id:'yi_ji',name:'伊籍',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#4a5a4a'},stats:{war:22,int:76}},
+  {id:'yuan_tan',name:'袁谭',portrait:{hair:'bun',face:'long',armor:'medium',color:'#6a5a8a'},stats:{war:60,int:50}},
+  {id:'zang_ba',name:'臧霸',portrait:{hair:'short',face:'square',armor:'heavy',color:'#3a4a5a'},stats:{war:82,int:48}},
+  {id:'zhang_he_cc',name:'张赫',portrait:{hair:'short',face:'square',armor:'heavy',color:'#5a4a3a'},stats:{war:78,int:42}},
+  {id:'zhang_ji_dz',name:'张济',portrait:{hair:'short',face:'square',armor:'heavy',color:'#5a3a2a'},stats:{war:75,int:35}},
+  {id:'zhang_xun_ys',name:'张勋',portrait:{hair:'bun',face:'long',armor:'medium',color:'#8a6a2a'},stats:{war:72,int:40}},
+  {id:'zhu_huan',name:'朱桓',portrait:{hair:'short',face:'square',armor:'heavy',color:'#4a6a6a'},stats:{war:82,int:52}},
+  {id:'zhu_jun',name:'朱儁',portrait:{hair:'bun',face:'square',armor:'heavy',color:'#5a5a8a'},stats:{war:78,int:65}},
+  {id:'zhu_ran',name:'朱然',portrait:{hair:'short',face:'long',armor:'medium',color:'#4a6a6a'},stats:{war:80,int:65}},
+  {id:'zhu_rong',name:'祝融',portrait:{hair:'long',face:'thin',armor:'medium',color:'#8a4a4a'},stats:{war:88,int:50}},
+  {id:'zhu_zhi',name:'朱治',portrait:{hair:'bun',face:'square',armor:'medium',color:'#4a6a5a'},stats:{war:65,int:62}},
+  // ===== 曹操势力新增 =====
+  {id:'wang_lang',name:'王朗',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#4a6fa5'},stats:{war:28,int:80}},
+  {id:'hua_xin',name:'华歆',portrait:{hair:'bun',face:'long',armor:'robe',color:'#5a6a9a'},stats:{war:25,int:78}},
+  {id:'cao_zhen',name:'曹真',portrait:{hair:'short',face:'square',armor:'heavy',color:'#1a3a6b'},stats:{war:85,int:60}},
+  {id:'wang_chang',name:'王昶',portrait:{hair:'bun',face:'long',armor:'medium',color:'#3a5a8a'},stats:{war:72,int:75}},
+  {id:'guo_huai_cc',name:'郭淮',portrait:{hair:'short',face:'long',armor:'medium',color:'#2a4a7a'},stats:{war:78,int:72}},
+  {id:'xin_pi',name:'辛毗',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#4a6fa5'},stats:{war:30,int:80}},
+  {id:'sima_yi_cc',name:'司马懿',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#2a3a6a'},stats:{war:52,int:98}},
+  // ===== 刘备势力新增 =====
+  {id:'chen_dao',name:'陈到',portrait:{hair:'short',face:'square',armor:'heavy',color:'#3a7a3a'},stats:{war:80,int:48}},
+  {id:'huo_jun',name:'霍峻',portrait:{hair:'short',face:'long',armor:'medium',color:'#3a7a3a'},stats:{war:75,int:52}},
+  {id:'zhang_yi',name:'张嶷',portrait:{hair:'short',face:'square',armor:'heavy',color:'#2a6a2a'},stats:{war:78,int:55}},
+  {id:'xiang_chong',name:'向宠',portrait:{hair:'short',face:'long',armor:'medium',color:'#3a7a3a'},stats:{war:72,int:60}},
+  {id:'ju_fu',name:'句扶',portrait:{hair:'short',face:'square',armor:'heavy',color:'#2a6a2a'},stats:{war:70,int:45}},
+  {id:'zhang_wing',name:'张翼',portrait:{hair:'short',face:'long',armor:'medium',color:'#3a7a3a'},stats:{war:72,int:55}},
+  {id:'deng_zhi',name:'邓芝',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#3a7a3a'},stats:{war:42,int:75}},
+  // ===== 孙权势力新增 =====
+  {id:'zhuge_jin',name:'诸葛瑾',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#8a3a3a'},stats:{war:30,int:82}},
+  {id:'gu_yong',name:'顾雍',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#9a4a4a'},stats:{war:22,int:85}},
+  {id:'zhang_zhao',name:'张昭',portrait:{hair:'bun',face:'long',armor:'robe',color:'#8a3a3a'},stats:{war:25,int:88}},
+  {id:'quan_cong',name:'全琮',portrait:{hair:'short',face:'square',armor:'heavy',color:'#aa4444'},stats:{war:78,int:55}},
+  {id:'lu_kai',name:'陆凯',portrait:{hair:'bun',face:'long',armor:'medium',color:'#9a4a4a'},stats:{war:72,int:72}},
+  {id:'lv_dai',name:'吕岱',portrait:{hair:'short',face:'long',armor:'medium',color:'#aa4444'},stats:{war:68,int:65}},
+  {id:'zhu_huan2',name:'朱异',portrait:{hair:'short',face:'round',armor:'medium',color:'#9a3a3a'},stats:{war:70,int:45}},
+  {id:'sun_shao',name:'孙邵',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#8a3a3a'},stats:{war:22,int:70}},
+  {id:'cheng_bing',name:'程秉',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#8a4a4a'},stats:{war:20,int:72}},
+  {id:'sun_yi',name:'孙翊',portrait:{hair:'short',face:'square',armor:'heavy',color:'#aa4444'},stats:{war:80,int:42}},
+  // ===== 袁绍势力新增 =====
+  {id:'yuan_shang',name:'袁尚',portrait:{hair:'bun',face:'round',armor:'medium',color:'#c8a840'},stats:{war:52,int:48}},
+  {id:'yuan_xi',name:'袁熙',portrait:{hair:'bun',face:'long',armor:'medium',color:'#b89830'},stats:{war:48,int:50}},
+  {id:'gao_gan',name:'高干',portrait:{hair:'short',face:'long',armor:'medium',color:'#c8a840'},stats:{war:72,int:52}},
+  {id:'qu_yi',name:'麹义',portrait:{hair:'short',face:'square',armor:'heavy',color:'#a88830'},stats:{war:88,int:35}},
+  {id:'guo_tu',name:'郭图',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#c8a840'},stats:{war:25,int:68}},
+  {id:'zhang_he_ys2',name:'蒋奇',portrait:{hair:'short',face:'long',armor:'medium',color:'#b89830'},stats:{war:72,int:38}},
+  {id:'han_meng',name:'韩猛',portrait:{hair:'short',face:'square',armor:'heavy',color:'#a88830'},stats:{war:78,int:28}},
+  // ===== 项羽势力新增 =====
+  {id:'ji_bu',name:'季布',portrait:{hair:'short',face:'square',armor:'heavy',color:'#7a0000'},stats:{war:85,int:52}},
+  {id:'huan_chu',name:'桓楚',portrait:{hair:'short',face:'square',armor:'heavy',color:'#8b0000'},stats:{war:82,int:38}},
+  {id:'ying_bu',name:'英布',portrait:{hair:'short',face:'square',armor:'heavy',color:'#7a1010'},stats:{war:90,int:35}},
+  {id:'yu_ziqi',name:'虞子期',portrait:{hair:'short',face:'long',armor:'heavy',color:'#8b0000'},stats:{war:80,int:42}},
+  {id:'zhongli_mo',name:'钟离眛',portrait:{hair:'short',face:'square',armor:'heavy',color:'#7a0000'},stats:{war:85,int:40}},
+  {id:'zhou_yin',name:'周殷',portrait:{hair:'bun',face:'long',armor:'medium',color:'#8b1010'},stats:{war:72,int:55}},
+  {id:'ding_gong',name:'丁公',portrait:{hair:'short',face:'round',armor:'heavy',color:'#7a0000'},stats:{war:70,int:40}},
+  {id:'xue_gong',name:'薛公',portrait:{hair:'bun',face:'thin',armor:'medium',color:'#8b0000'},stats:{war:60,int:58}},
+  // ===== 吕布势力新增 =====
+  {id:'wei_xu',name:'魏续',portrait:{hair:'short',face:'square',armor:'heavy',color:'#7a3a9a'},stats:{war:68,int:28}},
+  {id:'song_xian',name:'宋宪',portrait:{hair:'short',face:'long',armor:'medium',color:'#8a4aaa'},stats:{war:65,int:30}},
+  {id:'cao_xing',name:'曹性',portrait:{hair:'short',face:'square',armor:'medium',color:'#8a3a9a'},stats:{war:62,int:28}},
+  // ===== 董卓势力新增 =====
+  {id:'duan_wei',name:'段煨',portrait:{hair:'short',face:'long',armor:'medium',color:'#555555'},stats:{war:72,int:42}},
+  {id:'fan_chou',name:'樊稠',portrait:{hair:'short',face:'square',armor:'heavy',color:'#444444'},stats:{war:78,int:28}},
+  {id:'hu_zhen',name:'胡轸',portrait:{hair:'short',face:'square',armor:'heavy',color:'#555555'},stats:{war:72,int:30}},
+  {id:'zhang_xiu',name:'张绣',portrait:{hair:'short',face:'long',armor:'heavy',color:'#444455'},stats:{war:82,int:42}},
+  {id:'dong_min',name:'董旻',portrait:{hair:'short',face:'round',armor:'medium',color:'#555555'},stats:{war:62,int:30}},
+  // ===== 刘表势力新增 =====
+  {id:'liu_pan',name:'刘磐',portrait:{hair:'short',face:'square',armor:'heavy',color:'#2a8a8a'},stats:{war:75,int:38}},
+  {id:'kuai_yue',name:'蒯越',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#3a9a9a'},stats:{war:28,int:82}},
+  {id:'huan_jie',name:'桓阶',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#2a8a8a'},stats:{war:22,int:78}},
+  {id:'zhang_yun',name:'张允',portrait:{hair:'bun',face:'long',armor:'medium',color:'#3a8a8a'},stats:{war:55,int:50}},
+  {id:'liu_cong',name:'刘琮',portrait:{hair:'bun',face:'round',armor:'robe',color:'#2a8a8a'},stats:{war:25,int:42}},
+  // ===== 孙策势力新增 =====
+  {id:'jiang_qin2',name:'蒋钦',portrait:{hair:'short',face:'long',armor:'medium',color:'#dd5533'},stats:{war:78,int:55}},
+  {id:'ling_cao',name:'凌操',portrait:{hair:'short',face:'square',armor:'heavy',color:'#cc4422'},stats:{war:80,int:45}},
+  {id:'xu_kun',name:'徐琨',portrait:{hair:'bun',face:'long',armor:'medium',color:'#dd5533'},stats:{war:68,int:55}},
+  {id:'sun_ben',name:'孙贲',portrait:{hair:'short',face:'square',armor:'heavy',color:'#cc4422'},stats:{war:72,int:52}},
+  // ===== 马腾势力新增 =====
+  {id:'yan_xing',name:'阎行',portrait:{hair:'short',face:'square',armor:'heavy',color:'#aa6622'},stats:{war:85,int:40}},
+  {id:'cheng_yi',name:'成宜',portrait:{hair:'short',face:'long',armor:'medium',color:'#bb7733'},stats:{war:72,int:32}},
+  {id:'li_kan',name:'李堪',portrait:{hair:'short',face:'round',armor:'medium',color:'#aa6622'},stats:{war:68,int:30}},
+  {id:'yang_qiu',name:'杨秋',portrait:{hair:'short',face:'long',armor:'medium',color:'#bb7733'},stats:{war:70,int:35}},
+  // ===== 袁术势力新增 =====
+  {id:'qiao_rui',name:'桥蕤',portrait:{hair:'short',face:'long',armor:'medium',color:'#8855bb'},stats:{war:72,int:38}},
+  {id:'chen_lan',name:'陈兰',portrait:{hair:'short',face:'square',armor:'medium',color:'#9966cc'},stats:{war:70,int:32}},
+  {id:'lei_bo',name:'雷薄',portrait:{hair:'short',face:'round',armor:'medium',color:'#8855bb'},stats:{war:68,int:28}},
+  {id:'liu_xun_ys',name:'刘勋',portrait:{hair:'bun',face:'long',armor:'medium',color:'#9966cc'},stats:{war:65,int:55}},
+  // ===== 公孙瓒势力新增 =====
+  {id:'dan_jing',name:'单经',portrait:{hair:'short',face:'long',armor:'medium',color:'#cccccc'},stats:{war:68,int:40}},
+  {id:'guan_jing',name:'关靖',portrait:{hair:'bun',face:'thin',armor:'medium',color:'#dddddd'},stats:{war:50,int:65}},
+  {id:'zou_dan',name:'邹丹',portrait:{hair:'short',face:'square',armor:'heavy',color:'#cccccc'},stats:{war:72,int:35}},
+  // ===== 刘璋势力新增 =====
+  {id:'fei_guan',name:'费观',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#55aa77'},stats:{war:38,int:70}},
+  {id:'dong_he',name:'董和',portrait:{hair:'bun',face:'long',armor:'robe',color:'#66aa88'},stats:{war:35,int:75}},
+  {id:'liu_xun',name:'刘循',portrait:{hair:'bun',face:'round',armor:'medium',color:'#55aa77'},stats:{war:60,int:42}},
+  // ===== 孟获势力新增 =====
+  {id:'mulu_dawang',name:'木鹿大王',portrait:{hair:'long',face:'square',armor:'heavy',color:'#cc5500'},stats:{war:85,int:22}},
+  {id:'jin_huan_sanjie',name:'金环三结',portrait:{hair:'long',face:'round',armor:'heavy',color:'#dd6600'},stats:{war:82,int:25}},
+  {id:'a_hui_nan',name:'阿会喃',portrait:{hair:'long',face:'square',armor:'medium',color:'#cc5500'},stats:{war:78,int:28}},
+  {id:'mang_ya_chang',name:'忙牙长',portrait:{hair:'long',face:'round',armor:'heavy',color:'#dd6600'},stats:{war:80,int:22}},
+  // ===== 无归属/历史人物 =====
+  {id:'ju_shou2',name:'沮授',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#8a7a5a'},stats:{war:30,int:90}},
+  {id:'tai_shici',name:'太史慈',portrait:{hair:'short',face:'square',armor:'heavy',color:'#7a7a5a'},stats:{war:92,int:58}},
+  {id:'wei_yan2',name:'魏延',portrait:{hair:'short',face:'square',armor:'heavy',color:'#7a6a4a'},stats:{war:88,int:50}},
+  {id:'zhao_ang',name:'赵昂',portrait:{hair:'bun',face:'long',armor:'medium',color:'#8a8a7a'},stats:{war:70,int:62}},
+  {id:'yang_hu',name:'羊祜',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#9a9a8a'},stats:{war:55,int:88}},
+  {id:'wang_jun',name:'王濬',portrait:{hair:'bun',face:'long',armor:'medium',color:'#8a8a9a'},stats:{war:72,int:78}},
+  {id:'chen_tai',name:'陈泰',portrait:{hair:'bun',face:'long',armor:'medium',color:'#7a8a8a'},stats:{war:75,int:78}},
+  {id:'guanqiu_jian',name:'毌丘俭',portrait:{hair:'short',face:'square',armor:'heavy',color:'#8a8a7a'},stats:{war:78,int:68}},
+  {id:'wen_qin',name:'文钦',portrait:{hair:'short',face:'square',armor:'heavy',color:'#7a8a7a'},stats:{war:82,int:45}},
+  {id:'zu_mao',name:'祖茂',portrait:{hair:'short',face:'round',armor:'medium',color:'#6a7a6a'},stats:{war:65,int:35}},
+  {id:'cheng_pu2',name:'程普',portrait:{hair:'bun',face:'square',armor:'heavy',color:'#8a6a6a'},stats:{war:75,int:50}},
+  {id:'liu_ye',name:'刘晔',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#7a8a9a'},stats:{war:30,int:88}},
+  {id:'fu_gan',name:'傅干',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#8a9a8a'},stats:{war:25,int:80}},
+  {id:'cheng_yu2',name:'程昱',portrait:{hair:'bun',face:'long',armor:'robe',color:'#7a8a7a'},stats:{war:38,int:88}},
+  {id:'sun_hao',name:'孙皓',portrait:{hair:'bun',face:'round',armor:'robe',color:'#8a4a4a'},stats:{war:45,int:48}},
+  {id:'jiang_bin',name:'蒋斌',portrait:{hair:'bun',face:'long',armor:'medium',color:'#7a8a7a'},stats:{war:68,int:58}},
+  {id:'hua_tuo',name:'华佗',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#9a9a9a'},stats:{war:20,int:95}},
+  {id:'mi_heng',name:'祢衡',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#9a9a8a'},stats:{war:18,int:82}},
+  {id:'wang_yun',name:'王允',portrait:{hair:'bun',face:'long',armor:'robe',color:'#8a8a9a'},stats:{war:28,int:80}},
+  {id:'lu_zhi',name:'卢植',portrait:{hair:'bun',face:'long',armor:'medium',color:'#8a8a7a'},stats:{war:55,int:78}},
+  {id:'liu_biao2',name:'刘繇',portrait:{hair:'bun',face:'long',armor:'medium',color:'#7a8a7a'},stats:{war:50,int:62}},
+  {id:'yan_baihu',name:'严白虎',portrait:{hair:'short',face:'round',armor:'medium',color:'#8a7a6a'},stats:{war:65,int:28}},
+  {id:'wang_lang2',name:'王朗',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#9a9a8a'},stats:{war:25,int:75}},
+  {id:'xue_zong',name:'薛综',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#8a9a8a'},stats:{war:22,int:72}},
+  {id:'pan_jun',name:'潘濬',portrait:{hair:'bun',face:'long',armor:'medium',color:'#8a8a9a'},stats:{war:62,int:68}},
+  {id:'luo_tong',name:'骆统',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#9a8a8a'},stats:{war:30,int:72}},
+  {id:'xu_miao',name:'徐邈',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#8a9a9a'},stats:{war:28,int:78}},
+  {id:'sun_jian',name:'孙坚',portrait:{hair:'short',face:'square',armor:'heavy',color:'#aa4444'},stats:{war:90,int:65}},
+  {id:'liu_zhang2',name:'刘表',portrait:{hair:'bun',face:'long',armor:'robe',color:'#2a8a8a'},stats:{war:38,int:65}},
+  {id:'bo_fu',name:'伯符',portrait:{hair:'short',face:'square',armor:'heavy',color:'#cc4422'},stats:{war:90,int:65}},
+  {id:'zhang_jiao',name:'张角',portrait:{hair:'long',face:'thin',armor:'robe',color:'#5a5a8a'},stats:{war:55,int:88}},
+  {id:'zhang_liang2',name:'张梁',portrait:{hair:'long',face:'square',armor:'medium',color:'#5a5a8a'},stats:{war:72,int:42}},
+  {id:'he_jin',name:'何进',portrait:{hair:'bun',face:'round',armor:'robe',color:'#9a9a6a'},stats:{war:45,int:50}},
+  {id:'yuan_yi',name:'袁遗',portrait:{hair:'bun',face:'long',armor:'medium',color:'#9a8a5a'},stats:{war:50,int:55}},
+  {id:'gongsun_du',name:'公孙度',portrait:{hair:'short',face:'long',armor:'medium',color:'#8a8a8a'},stats:{war:65,int:62}},
+  {id:'shi_huan',name:'是仪',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#8a9a8a'},stats:{war:20,int:75}},
+  {id:'liu_xie',name:'刘协',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#c8a850'},stats:{war:18,int:55}},
+  {id:'fu_wan',name:'伏完',portrait:{hair:'bun',face:'long',armor:'robe',color:'#9a9a9a'},stats:{war:22,int:58}},
+  {id:'cai_yan',name:'蔡琰',portrait:{hair:'long',face:'thin',armor:'robe',color:'#c88a8a'},stats:{war:18,int:85}},
+  {id:'sun_luban',name:'孙鲁班',portrait:{hair:'long',face:'thin',armor:'robe',color:'#cc8888'},stats:{war:25,int:75}},
+  {id:'guo_nuwang',name:'祝融',portrait:{hair:'long',face:'round',armor:'medium',color:'#cc6644'},stats:{war:85,int:45}},
+  {id:'ma_yunlu',name:'马云禄',portrait:{hair:'long',face:'thin',armor:'medium',color:'#bb7733'},stats:{war:80,int:50}},
+  {id:'xiao_qiao',name:'小乔',portrait:{hair:'long',face:'thin',armor:'robe',color:'#e8b0a0'},stats:{war:18,int:80}},
+  {id:'da_qiao',name:'大乔',portrait:{hair:'long',face:'thin',armor:'robe',color:'#e8b0b0'},stats:{war:18,int:78}},
+  {id:'diao_chan',name:'貂蝉',portrait:{hair:'long',face:'thin',armor:'robe',color:'#e8a8c0'},stats:{war:18,int:82}},
+  {id:'wu_guotai',name:'吴国太',portrait:{hair:'bun',face:'round',armor:'robe',color:'#cc8888'},stats:{war:20,int:72}},
+  {id:'lu_lingqi',name:'吕玲绮',portrait:{hair:'long',face:'thin',armor:'medium',color:'#bb88aa'},stats:{war:75,int:55}},
+  {id:'sun_shangxiang',name:'孙尚香',portrait:{hair:'long',face:'thin',armor:'medium',color:'#dd6666'},stats:{war:78,int:60}},
+  {id:'xing_daorong',name:'邢道荣',portrait:{hair:'short',face:'round',armor:'heavy',color:'#8a7a5a'},stats:{war:72,int:22}},
+  {id:'wu_anguo',name:'武安国',portrait:{hair:'short',face:'square',armor:'heavy',color:'#7a8a5a'},stats:{war:75,int:25}},
+  {id:'hua_xiong2',name:'李傕',portrait:{hair:'short',face:'square',armor:'heavy',color:'#555566'},stats:{war:78,int:32}},
+  {id:'xu_gong',name:'许贡',portrait:{hair:'bun',face:'long',armor:'medium',color:'#8a8a8a'},stats:{war:55,int:55}},
+  {id:'liu_dai',name:'刘岱',portrait:{hair:'bun',face:'long',armor:'medium',color:'#8a8a7a'},stats:{war:60,int:48}},
+  {id:'wen_chou2',name:'鞠义',portrait:{hair:'short',face:'square',armor:'heavy',color:'#9a8a5a'},stats:{war:82,int:35}},
+  {id:'wang_shuang',name:'王双',portrait:{hair:'short',face:'square',armor:'heavy',color:'#7a8a7a'},stats:{war:85,int:30}},
+  {id:'chen_qun2',name:'夏侯楙',portrait:{hair:'bun',face:'round',armor:'medium',color:'#7a8a8a'},stats:{war:45,int:42}},
+  {id:'zhuge_zhan',name:'诸葛瞻',portrait:{hair:'bun',face:'thin',armor:'medium',color:'#4a7a4a'},stats:{war:72,int:80}},
+  {id:'li_yan2',name:'李丰',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#8a9a7a'},stats:{war:30,int:65}},
+  {id:'xu_zhi',name:'许芝',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#9a9a8a'},stats:{war:20,int:68}},
+  {id:'hao_zhao',name:'郝昭',portrait:{hair:'short',face:'square',armor:'heavy',color:'#7a8a8a'},stats:{war:80,int:58}},
+
+  // ===== 张鲁势力 =====
+  {id:'zhang_lu',name:'张鲁',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#5a8a40'},stats:{war:38,int:72}},
+  {id:'yang_ren_zl',name:'杨任',portrait:{hair:'short',face:'square',armor:'heavy',color:'#5a8a40'},stats:{war:75,int:55}},
+  {id:'yang_ang',name:'杨昂',portrait:{hair:'short',face:'long',armor:'heavy',color:'#4a7a35'},stats:{war:72,int:48}},
+  {id:'yan_pu',name:'阎圃',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#5a8a40'},stats:{war:28,int:78}},
+  {id:'zhang_wei_zl',name:'张卫',portrait:{hair:'short',face:'round',armor:'medium',color:'#4a7a35'},stats:{war:68,int:42}},
+
+  // ===== 韩遂势力 =====
+  {id:'cheng_yin_hs',name:'程银',portrait:{hair:'short',face:'square',armor:'heavy',color:'#aa5522'},stats:{war:70,int:40}},
+  {id:'hou_xuan',name:'侯选',portrait:{hair:'short',face:'square',armor:'heavy',color:'#993311'},stats:{war:68,int:38}},
+  {id:'ma_wan',name:'马玩',portrait:{hair:'short',face:'round',armor:'medium',color:'#993311'},stats:{war:65,int:35}},
+  {id:'li_xian_hs',name:'李堪',portrait:{hair:'short',face:'long',armor:'heavy',color:'#aa5522'},stats:{war:72,int:42}},
+
+  // ===== 陶谦势力 =====
+  {id:'cao_bao',name:'曹豹',portrait:{hair:'short',face:'round',armor:'medium',color:'#4a7788'},stats:{war:55,int:35}},
+  {id:'xu_dan',name:'许耽',portrait:{hair:'short',face:'square',armor:'medium',color:'#3a6678'},stats:{war:58,int:42}},
+  {id:'zhang_kai',name:'张闿',portrait:{hair:'short',face:'square',armor:'medium',color:'#3a6678'},stats:{war:62,int:30}},
+  {id:'mi_fang_tq',name:'麋芳',portrait:{hair:'bun',face:'round',armor:'medium',color:'#4a7788'},stats:{war:48,int:45}},
+
+  // ===== 孔融势力 =====
+  {id:'tai_shici_kr',name:'太史慈',portrait:{hair:'short',face:'square',armor:'heavy',color:'#cc9933'},stats:{war:97,int:72}},
+  {id:'wang_xiu',name:'王修',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#aa8811'},stats:{war:22,int:75}},
+  {id:'zong_bao',name:'宗宝',portrait:{hair:'short',face:'round',armor:'medium',color:'#aa8811'},stats:{war:60,int:40}},
+  {id:'liu_kong',name:'刘孔慈',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#bb9922'},stats:{war:55,int:45}},
+
+  // ===== 张燕势力 =====
+  {id:'chu_yan',name:'杜远',portrait:{hair:'wild',face:'round',armor:'medium',color:'#445533'},stats:{war:68,int:35}},
+  {id:'yang_feng_zy',name:'杨凤',portrait:{hair:'wild',face:'square',armor:'medium',color:'#556644'},stats:{war:72,int:40}},
+  {id:'hu_cai',name:'胡才',portrait:{hair:'wild',face:'long',armor:'medium',color:'#445533'},stats:{war:70,int:38}},
+
+  // ===== 公孙度势力 =====
+  {id:'gongsun_kang',name:'公孙康',portrait:{hair:'short',face:'round',armor:'medium',color:'#3366aa'},stats:{war:62,int:65}},
+  {id:'liu_yi_gsd',name:'柳毅',portrait:{hair:'short',face:'square',armor:'heavy',color:'#2255aa'},stats:{war:75,int:50}},
+  {id:'bei_yan',name:'卑衍',portrait:{hair:'short',face:'square',armor:'heavy',color:'#2255aa'},stats:{war:72,int:45}},
+
+  // ===== 刘繇势力 =====
+  {id:'liu_yao',name:'刘繇',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#886644'},stats:{war:40,int:68}},
+  {id:'xu_shao',name:'许劭',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#886644'},stats:{war:10,int:82}},
+  {id:'zhang_ying',name:'张英',portrait:{hair:'short',face:'square',armor:'heavy',color:'#776633'},stats:{war:70,int:45}},
+  {id:'chen_heng',name:'陈横',portrait:{hair:'short',face:'round',armor:'medium',color:'#776633'},stats:{war:65,int:40}},
+
+  // ===== 士燮势力 =====
+  {id:'shi_yi',name:'士壹',portrait:{hair:'short',face:'round',armor:'medium',color:'#338866'},stats:{war:55,int:60}},
+  {id:'shi_wei',name:'士徽',portrait:{hair:'short',face:'long',armor:'medium',color:'#227755'},stats:{war:52,int:55}},
+  {id:'xu_jing_sx',name:'薛综',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#338866'},stats:{war:18,int:78}},
+
+  // ===== 刘虞势力 =====
+  {id:'liu_yu',name:'刘虞',portrait:{hair:'bun',face:'long',armor:'robe',color:'#5588bb'},stats:{war:28,int:72}},
+  {id:'wei_you',name:'魏攸',portrait:{hair:'bun',face:'thin',armor:'robe',color:'#4477aa'},stats:{war:20,int:70}},
+  {id:'tian_chou',name:'田畴',portrait:{hair:'short',face:'long',armor:'medium',color:'#5588bb'},stats:{war:65,int:75}},
+  {id:'qiu_li',name:'鲜于辅',portrait:{hair:'short',face:'square',armor:'heavy',color:'#4477aa'},stats:{war:70,int:52}},
+
+  // ===== 严白虎势力 =====
+  {id:'yan_yu',name:'严舆',portrait:{hair:'short',face:'round',armor:'medium',color:'#994400'},stats:{war:62,int:38}},
+  {id:'wang_lang_ybh',name:'王朗',portrait:{hair:'bun',face:'long',armor:'robe',color:'#aa6611'},stats:{war:25,int:72}},
+  {id:'dong_ci',name:'董袭',portrait:{hair:'short',face:'square',armor:'heavy',color:'#994400'},stats:{war:75,int:48}},
+
+  // ===== 刘度势力 =====
+  {id:'xing_dao_rong',name:'邢道荣',portrait:{hair:'wild',face:'square',armor:'heavy',color:'#774488'},stats:{war:78,int:22}},
+  {id:'bao_long',name:'鲍隆',portrait:{hair:'short',face:'square',armor:'medium',color:'#663377'},stats:{war:65,int:30}},
+  {id:'jin_xuan',name:'金旋',portrait:{hair:'bun',face:'long',armor:'medium',color:'#774488'},stats:{war:45,int:55}},
+];
+
+// ==================== SEEDED RANDOM ====================
+function hashStr(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) {
+    h = ((h << 5) - h + str.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
+}
+
+function seededRandom(seed) {
+  let s = seed;
+  return function() {
+    s = (s * 1664525 + 1013904223) & 0x7fffffff;
+    return s / 0x7fffffff;
+  };
+}
+
+// ==================== COLOR UTILITIES ====================
+function parseColor(hex) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return {r,g,b};
+}
+
+function rgbStr(r,g,b,a) {
+  if (a !== undefined) return `rgba(${r|0},${g|0},${b|0},${a})`;
+  return `rgb(${r|0},${g|0},${b|0})`;
+}
+
+function lighten(hex, amt) {
+  const c = parseColor(hex);
+  return rgbStr(
+    Math.min(255, c.r + amt),
+    Math.min(255, c.g + amt),
+    Math.min(255, c.b + amt)
+  );
+}
+
+function darken(hex, amt) {
+  const c = parseColor(hex);
+  return rgbStr(
+    Math.max(0, c.r - amt),
+    Math.max(0, c.g - amt),
+    Math.max(0, c.b - amt)
+  );
+}
+
+function colorWithAlpha(hex, a) {
+  const c = parseColor(hex);
+  return rgbStr(c.r, c.g, c.b, a);
+}
+
+// ==================== DRAWING HELPERS ====================
+function drawEllipse(ctx, cx, cy, rx, ry) {
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+}
+
+function drawRoundedRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+// ==================== PORTRAIT RENDERER ====================
+function generatePortrait(canvas, general) {
+  const ctx = canvas.getContext('2d');
+  const W = 128, H = 128;
+  const rng = seededRandom(hashStr(general.id));
+  const p = general.portrait;
+  const s = general.stats;
+  const id = general.id;
+
+  // Face geometry based on face type
+  let faceW, faceH, chinY, jawW;
+  const faceCX = 64;
+  let faceCY = 52;
+  switch(p.face) {
+    case 'square': faceW = 26; faceH = 28; jawW = 24; break;
+    case 'long': faceW = 22; faceH = 32; jawW = 18; break;
+    case 'round': faceW = 27; faceH = 26; jawW = 22; break;
+    case 'thin': faceW = 20; faceH = 30; jawW = 16; break;
+    default: faceW = 24; faceH = 28; jawW = 20;
+  }
+
+  // Special: dong_zhuo fat face
+  if (id === 'dong_zhuo') { faceW = 32; faceH = 30; jawW = 28; }
+  // liu_bei longer face
+  if (id === 'liu_bei') { faceH += 3; }
+
+  const skinBase = (id === 'guan_yu') ? '#c85050' : '#f0cba0';
+  const skinLight = (id === 'guan_yu') ? '#d88070' : '#f8dcc0';
+  const skinShadow = (id === 'guan_yu') ? '#a04040' : '#c8a070';
+  const skinDark = (id === 'guan_yu') ? '#803030' : '#a08050';
+
+  // ---- BACKGROUND ----
+  const bgGrad = ctx.createRadialGradient(64, 50, 10, 64, 64, 90);
+  bgGrad.addColorStop(0, colorWithAlpha(p.color, 0.35));
+  bgGrad.addColorStop(0.6, '#12121e');
+  bgGrad.addColorStop(1, '#0a0a14');
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Subtle pattern
+  ctx.globalAlpha = 0.04;
+  for (let i = 0; i < 200; i++) {
+    const px = rng() * W, py = rng() * H;
+    ctx.fillStyle = rng() > 0.5 ? '#fff' : '#000';
+    ctx.fillRect(px, py, 1, 1);
+  }
+  ctx.globalAlpha = 1;
+
+  // ---- NECK ----
+  const neckW = faceW * 0.55;
+  ctx.fillStyle = skinShadow;
+  ctx.beginPath();
+  ctx.moveTo(faceCX - neckW, faceCY + faceH - 4);
+  ctx.lineTo(faceCX - neckW - 2, H);
+  ctx.lineTo(faceCX + neckW + 2, H);
+  ctx.lineTo(faceCX + neckW, faceCY + faceH - 4);
+  ctx.closePath();
+  ctx.fill();
+
+  // Neck shading
+  const neckGrad = ctx.createLinearGradient(faceCX - neckW, 0, faceCX + neckW, 0);
+  neckGrad.addColorStop(0, skinShadow);
+  neckGrad.addColorStop(0.4, skinBase);
+  neckGrad.addColorStop(1, skinDark);
+  ctx.fillStyle = neckGrad;
+  ctx.beginPath();
+  ctx.moveTo(faceCX - neckW, faceCY + faceH - 6);
+  ctx.lineTo(faceCX - neckW - 1, faceCY + faceH + 16);
+  ctx.lineTo(faceCX + neckW + 1, faceCY + faceH + 16);
+  ctx.lineTo(faceCX + neckW, faceCY + faceH - 6);
+  ctx.closePath();
+  ctx.fill();
+
+  // ---- ARMOR / SHOULDERS ----
+  drawArmor(ctx, general, faceCX, faceCY, faceH, faceW, rng);
+
+  // ---- FACE ----
+  drawFace(ctx, faceCX, faceCY, faceW, faceH, jawW, skinBase, skinLight, skinShadow, p.face);
+
+  // ---- EYES ----
+  drawEyes(ctx, general, faceCX, faceCY, faceW, faceH, rng);
+
+  // ---- NOSE ----
+  drawNose(ctx, faceCX, faceCY, faceH, skinShadow, skinDark, p.face);
+
+  // ---- MOUTH ----
+  drawMouth(ctx, general, faceCX, faceCY, faceH, skinShadow, skinDark);
+
+  // ---- EYEBROWS ----
+  drawEyebrows(ctx, general, faceCX, faceCY, faceW);
+
+  // ---- BEARD ----
+  drawBeard(ctx, general, faceCX, faceCY, faceW, faceH, jawW, rng);
+
+  // ---- EARS ----
+  drawEars(ctx, general, faceCX, faceCY, faceW, faceH, skinBase, skinShadow);
+
+  // ---- HAIR ----
+  drawHair(ctx, general, faceCX, faceCY, faceW, faceH, rng);
+
+  // ---- SPECIAL FEATURES ----
+  drawSpecial(ctx, general, faceCX, faceCY, faceW, faceH, rng);
+
+  // ---- BORDER ----
+  drawBorder(ctx, W, H);
+}
+
+// ==================== FACE DRAWING ====================
+function drawFace(ctx, cx, cy, fw, fh, jw, skinBase, skinLight, skinShadow, faceType) {
+  ctx.save();
+
+  // Main face shape with bezier curves
+  ctx.beginPath();
+  const topY = cy - fh + 4;
+  const midY = cy + 2;
+  const botY = cy + fh - 6;
+  const chinY = cy + fh;
+
+  // Start from top-left of face
+  ctx.moveTo(cx - fw + 2, topY);
+  // Forehead curve
+  ctx.quadraticCurveTo(cx, topY - 6, cx + fw - 2, topY);
+  // Right side
+  ctx.quadraticCurveTo(cx + fw + 2, midY, cx + jw, botY);
+  // Chin
+  if (faceType === 'square') {
+    ctx.quadraticCurveTo(cx + jw - 2, chinY, cx, chinY + 2);
+    ctx.quadraticCurveTo(cx - jw + 2, chinY, cx - jw, botY);
+  } else if (faceType === 'round') {
+    ctx.quadraticCurveTo(cx + jw * 0.5, chinY + 4, cx, chinY + 3);
+    ctx.quadraticCurveTo(cx - jw * 0.5, chinY + 4, cx - jw, botY);
+  } else if (faceType === 'long') {
+    ctx.quadraticCurveTo(cx + jw * 0.6, chinY + 2, cx, chinY + 6);
+    ctx.quadraticCurveTo(cx - jw * 0.6, chinY + 2, cx - jw, botY);
+  } else { // thin
+    ctx.quadraticCurveTo(cx + jw * 0.4, chinY, cx, chinY + 4);
+    ctx.quadraticCurveTo(cx - jw * 0.4, chinY, cx - jw, botY);
+  }
+  // Left side
+  ctx.quadraticCurveTo(cx - fw - 2, midY, cx - fw + 2, topY);
+  ctx.closePath();
+
+  // Skin gradient
+  const faceGrad = ctx.createRadialGradient(cx - 4, cy - 4, 2, cx, cy, fh + 5);
+  faceGrad.addColorStop(0, skinLight);
+  faceGrad.addColorStop(0.5, skinBase);
+  faceGrad.addColorStop(1, skinShadow);
+  ctx.fillStyle = faceGrad;
+  ctx.fill();
+
+  // Subtle cheek blush
+  ctx.globalAlpha = 0.12;
+  drawEllipse(ctx, cx - fw * 0.5, cy + 6, 8, 5);
+  ctx.fillStyle = '#d08080';
+  ctx.fill();
+  drawEllipse(ctx, cx + fw * 0.5, cy + 6, 8, 5);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Face edge shadow (left and chin)
+  ctx.globalAlpha = 0.15;
+  ctx.strokeStyle = skinShadow;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(cx + fw - 2, cy - fh + 10);
+  ctx.quadraticCurveTo(cx + fw + 1, cy + 2, cx + jw - 1, cy + fh - 6);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  ctx.restore();
+}
+
+// ==================== EYES ====================
+function drawEyes(ctx, general, cx, cy, fw, fh, rng) {
+  const id = general.id;
+  const s = general.stats;
+  const isFierce = s.war > 80;
+  const isCalm = s.int > 80;
+
+  const eyeY = cy - 2;
+  const eyeSpacing = fw * 0.42;
+  const eyeW = 7;
+  const eyeH = isFierce ? 4.5 : (isCalm ? 3.5 : 4);
+
+  // Zhang Fei: wide ring-eyes
+  const isRingEye = (id === 'zhang_fei');
+  const leftEX = cx - eyeSpacing;
+  const rightEX = cx + eyeSpacing;
+
+  for (const ex of [leftEX, rightEX]) {
+    ctx.save();
+
+    if (isRingEye) {
+      // Wide circular angry eyes for Zhang Fei
+      ctx.fillStyle = '#fff';
+      drawEllipse(ctx, ex, eyeY, 7, 6);
+      ctx.fill();
+      ctx.strokeStyle = '#1a1a1a';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Large iris
+      ctx.fillStyle = '#1a0a00';
+      drawEllipse(ctx, ex, eyeY, 4.5, 4.5);
+      ctx.fill();
+
+      // Pupil
+      ctx.fillStyle = '#000';
+      drawEllipse(ctx, ex, eyeY + 0.5, 2.5, 2.5);
+      ctx.fill();
+
+      // Highlight
+      ctx.fillStyle = '#fff';
+      drawEllipse(ctx, ex - 1.5, eyeY - 1.5, 1.5, 1.5);
+      ctx.fill();
+
+      // Red veins in sclera
+      ctx.strokeStyle = 'rgba(200,50,50,0.4)';
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(ex - 6, eyeY - 1);
+      ctx.lineTo(ex - 3, eyeY);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(ex + 6, eyeY + 1);
+      ctx.lineTo(ex + 3, eyeY);
+      ctx.stroke();
+    } else {
+      // Normal eyes
+      // Eye white
+      ctx.fillStyle = '#f8f4f0';
+      ctx.beginPath();
+      ctx.moveTo(ex - eyeW, eyeY);
+      ctx.quadraticCurveTo(ex, eyeY - eyeH, ex + eyeW, eyeY);
+      ctx.quadraticCurveTo(ex, eyeY + eyeH * 0.7, ex - eyeW, eyeY);
+      ctx.closePath();
+      ctx.fill();
+
+      // Eye outline
+      ctx.strokeStyle = '#2a1a0a';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Iris
+      const irisR = eyeH * 0.65;
+      const irisColor = (id === 'guan_yu') ? '#3a1a0a' :
+                         (id.includes('lv_bu')) ? '#4a2060' :
+                         '#1a1000';
+      ctx.fillStyle = irisColor;
+      drawEllipse(ctx, ex + 0.3, eyeY, irisR + 0.5, irisR + 0.5);
+      ctx.fill();
+
+      // Pupil
+      ctx.fillStyle = '#000';
+      drawEllipse(ctx, ex + 0.3, eyeY + 0.3, irisR * 0.5, irisR * 0.5);
+      ctx.fill();
+
+      // Highlight
+      ctx.fillStyle = '#fff';
+      drawEllipse(ctx, ex - 1, eyeY - 1, 1.2, 1.2);
+      ctx.fill();
+      ctx.globalAlpha = 0.5;
+      drawEllipse(ctx, ex + 1.5, eyeY + 0.5, 0.7, 0.7);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      // Upper eyelid line (thicker)
+      ctx.strokeStyle = '#1a0a00';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(ex - eyeW, eyeY);
+      ctx.quadraticCurveTo(ex, eyeY - eyeH - 0.5, ex + eyeW, eyeY);
+      ctx.stroke();
+
+      // Lower lash line
+      ctx.strokeStyle = 'rgba(60,30,10,0.3)';
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(ex - eyeW + 1, eyeY + 0.5);
+      ctx.quadraticCurveTo(ex, eyeY + eyeH * 0.6, ex + eyeW - 1, eyeY + 0.5);
+      ctx.stroke();
+    }
+
+    // Special: Xiahou Dun scar over left eye
+    if (id === 'xiahou_dun' && ex === leftEX) {
+      ctx.strokeStyle = '#a06060';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(ex - 3, eyeY - 10);
+      ctx.lineTo(ex + 1, eyeY);
+      ctx.lineTo(ex - 2, eyeY + 8);
+      ctx.stroke();
+      ctx.strokeStyle = '#c08080';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(ex - 2, eyeY - 10);
+      ctx.lineTo(ex + 2, eyeY);
+      ctx.lineTo(ex - 1, eyeY + 8);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+}
+
+// ==================== EYEBROWS ====================
+function drawEyebrows(ctx, general, cx, cy, fw) {
+  const s = general.stats;
+  const id = general.id;
+  const isFierce = s.war > 80;
+  const isCalm = s.int > 80;
+
+  const browY = cy - 8;
+  const browSpacing = fw * 0.42;
+  const browLen = 10;
+
+  ctx.lineWidth = 2.2;
+  ctx.lineCap = 'round';
+
+  for (let side = -1; side <= 1; side += 2) {
+    const bx = cx + side * browSpacing;
+    ctx.strokeStyle = '#1a0a00';
+
+    if (id === 'zhang_fei') {
+      // Angry thick brows pointing sharply up
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(bx - side * browLen * 0.3, browY + 4);
+      ctx.lineTo(bx + side * browLen * 0.5, browY - 3);
+      ctx.stroke();
+    } else if (isFierce) {
+      // Angled angry brows
+      ctx.beginPath();
+      ctx.moveTo(bx - side * browLen * 0.4, browY + 2);
+      ctx.quadraticCurveTo(bx, browY - 2, bx + side * browLen * 0.4, browY);
+      ctx.stroke();
+    } else if (isCalm) {
+      // Level calm brows
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(bx - side * browLen * 0.4, browY);
+      ctx.quadraticCurveTo(bx, browY - 1.5, bx + side * browLen * 0.4, browY);
+      ctx.stroke();
+    } else {
+      // Neutral
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(bx - side * browLen * 0.4, browY + 1);
+      ctx.quadraticCurveTo(bx, browY - 1, bx + side * browLen * 0.4, browY + 0.5);
+      ctx.stroke();
+    }
+  }
+  ctx.lineWidth = 1;
+  ctx.lineCap = 'butt';
+}
+
+// ==================== NOSE ====================
+function drawNose(ctx, cx, cy, fh, skinShadow, skinDark, faceType) {
+  const noseY = cy + fh * 0.2;
+  const noseW = faceType === 'thin' ? 3 : (faceType === 'square' ? 5 : 4);
+
+  // Nose bridge shadow
+  ctx.strokeStyle = 'rgba(100,70,40,0.25)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - 3);
+  ctx.lineTo(cx - 0.5, noseY);
+  ctx.stroke();
+
+  // Nose tip
+  ctx.fillStyle = skinShadow;
+  ctx.beginPath();
+  ctx.moveTo(cx - noseW, noseY + 2);
+  ctx.quadraticCurveTo(cx, noseY + 4, cx + noseW, noseY + 2);
+  ctx.quadraticCurveTo(cx + noseW - 1, noseY, cx, noseY - 1);
+  ctx.quadraticCurveTo(cx - noseW + 1, noseY, cx - noseW, noseY + 2);
+  ctx.fill();
+
+  // Nostrils
+  ctx.fillStyle = skinDark;
+  drawEllipse(ctx, cx - 2, noseY + 2, 1.2, 0.8);
+  ctx.fill();
+  drawEllipse(ctx, cx + 2, noseY + 2, 1.2, 0.8);
+  ctx.fill();
+
+  // Nose highlight
+  ctx.globalAlpha = 0.2;
+  ctx.fillStyle = '#fff';
+  drawEllipse(ctx, cx - 0.5, noseY - 1, 1.5, 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+}
+
+// ==================== MOUTH ====================
+function drawMouth(ctx, general, cx, cy, fh, skinShadow, skinDark) {
+  const id = general.id;
+  const s = general.stats;
+  const mouthY = cy + fh * 0.55;
+  const isFierce = s.war > 80;
+
+  if (id === 'zhang_fei') {
+    // Wide open angry mouth
+    ctx.fillStyle = '#3a0a0a';
+    ctx.beginPath();
+    ctx.moveTo(cx - 8, mouthY - 1);
+    ctx.quadraticCurveTo(cx, mouthY + 6, cx + 8, mouthY - 1);
+    ctx.quadraticCurveTo(cx, mouthY + 2, cx - 8, mouthY - 1);
+    ctx.fill();
+    // Teeth
+    ctx.fillStyle = '#e8e0d0';
+    ctx.fillRect(cx - 4, mouthY - 0.5, 8, 2);
+  } else if (id === 'cao_cao') {
+    // Slight smirk
+    ctx.strokeStyle = '#8a5a3a';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(cx - 6, mouthY);
+    ctx.quadraticCurveTo(cx - 2, mouthY + 1, cx, mouthY);
+    ctx.quadraticCurveTo(cx + 3, mouthY - 2, cx + 7, mouthY - 2);
+    ctx.stroke();
+    // Lower lip hint
+    ctx.globalAlpha = 0.3;
+    ctx.strokeStyle = '#a06050';
+    ctx.beginPath();
+    ctx.moveTo(cx - 4, mouthY + 2);
+    ctx.quadraticCurveTo(cx, mouthY + 3.5, cx + 5, mouthY + 1);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  } else if (id === 'dong_zhuo') {
+    // Sinister grin
+    ctx.strokeStyle = '#5a2020';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx - 8, mouthY + 1);
+    ctx.quadraticCurveTo(cx, mouthY - 3, cx + 8, mouthY + 1);
+    ctx.stroke();
+    ctx.fillStyle = '#4a1010';
+    ctx.beginPath();
+    ctx.moveTo(cx - 6, mouthY);
+    ctx.quadraticCurveTo(cx, mouthY + 4, cx + 6, mouthY);
+    ctx.quadraticCurveTo(cx, mouthY + 1, cx - 6, mouthY);
+    ctx.fill();
+  } else if (id === 'liu_bei') {
+    // Kind gentle smile
+    ctx.strokeStyle = '#a06050';
+    ctx.lineWidth = 1.3;
+    ctx.beginPath();
+    ctx.moveTo(cx - 5, mouthY - 0.5);
+    ctx.quadraticCurveTo(cx, mouthY + 3, cx + 5, mouthY - 0.5);
+    ctx.stroke();
+  } else if (isFierce) {
+    // Clenched mouth
+    ctx.strokeStyle = '#6a3a2a';
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.moveTo(cx - 6, mouthY);
+    ctx.lineTo(cx + 6, mouthY);
+    ctx.stroke();
+    // Tense lower lip
+    ctx.globalAlpha = 0.2;
+    drawEllipse(ctx, cx, mouthY + 2, 5, 2);
+    ctx.fillStyle = skinShadow;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  } else {
+    // Neutral/calm mouth
+    ctx.strokeStyle = '#8a5a3a';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(cx - 5, mouthY);
+    ctx.quadraticCurveTo(cx, mouthY + 1.5, cx + 5, mouthY);
+    ctx.stroke();
+    // Lower lip
+    ctx.globalAlpha = 0.15;
+    drawEllipse(ctx, cx, mouthY + 2.5, 4, 2);
+    ctx.fillStyle = '#c08070';
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ==================== BEARD ====================
+function drawBeard(ctx, general, cx, cy, fw, fh, jw, rng) {
+  const id = general.id;
+  const s = general.stats;
+  const beardY = cy + fh * 0.45;
+
+  if (id === 'guan_yu') {
+    // Long flowing black beard - iconic
+    ctx.save();
+    const beardColor = '#1a0800';
+    const beardLight = '#3a2010';
+    for (let i = 0; i < 25; i++) {
+      const bx = cx - 10 + rng() * 20;
+      const startY = beardY + rng() * 3;
+      const endY = startY + 25 + rng() * 20;
+      const curvX = bx + (rng() - 0.5) * 8;
+      ctx.strokeStyle = i % 3 === 0 ? beardLight : beardColor;
+      ctx.lineWidth = 0.8 + rng() * 0.6;
+      ctx.beginPath();
+      ctx.moveTo(bx, startY);
+      ctx.quadraticCurveTo(curvX, (startY + endY) / 2, bx + (rng() - 0.5) * 6, endY);
+      ctx.stroke();
+    }
+    // Beard base mass
+    ctx.fillStyle = beardColor;
+    ctx.beginPath();
+    ctx.moveTo(cx - 12, beardY);
+    ctx.quadraticCurveTo(cx - 14, beardY + 20, cx - 8, beardY + 40);
+    ctx.quadraticCurveTo(cx, beardY + 48, cx + 8, beardY + 40);
+    ctx.quadraticCurveTo(cx + 14, beardY + 20, cx + 12, beardY);
+    ctx.quadraticCurveTo(cx, beardY + 5, cx - 12, beardY);
+    ctx.fill();
+    // Beard strands on top
+    for (let i = 0; i < 15; i++) {
+      const bx = cx - 8 + rng() * 16;
+      ctx.strokeStyle = beardLight;
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(bx, beardY + 5);
+      ctx.lineTo(bx + (rng() - 0.5) * 3, beardY + 35 + rng() * 10);
+      ctx.stroke();
+    }
+    // Mustache
+    ctx.strokeStyle = beardColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx - 2, beardY - 6);
+    ctx.quadraticCurveTo(cx - 10, beardY - 2, cx - 14, beardY + 3);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx + 2, beardY - 6);
+    ctx.quadraticCurveTo(cx + 10, beardY - 2, cx + 14, beardY + 3);
+    ctx.stroke();
+    ctx.restore();
+  } else if (id === 'zhang_fei') {
+    // Wild bushy beard
+    ctx.save();
+    ctx.fillStyle = '#0a0500';
+    ctx.beginPath();
+    ctx.moveTo(cx - 16, beardY - 4);
+    ctx.quadraticCurveTo(cx - 20, beardY + 10, cx - 14, beardY + 22);
+    ctx.quadraticCurveTo(cx, beardY + 28, cx + 14, beardY + 22);
+    ctx.quadraticCurveTo(cx + 20, beardY + 10, cx + 16, beardY - 4);
+    ctx.quadraticCurveTo(cx, beardY + 2, cx - 16, beardY - 4);
+    ctx.fill();
+    // Wild strands
+    for (let i = 0; i < 30; i++) {
+      const bx = cx - 14 + rng() * 28;
+      const by = beardY + rng() * 20;
+      const angle = (rng() - 0.5) * 1.5;
+      const len = 5 + rng() * 10;
+      ctx.strokeStyle = rng() > 0.5 ? '#1a0a00' : '#2a1500';
+      ctx.lineWidth = 0.6 + rng() * 0.8;
+      ctx.beginPath();
+      ctx.moveTo(bx, by);
+      ctx.lineTo(bx + Math.cos(angle) * len, by + Math.sin(angle) * len + 3);
+      ctx.stroke();
+    }
+    // Big mustache
+    ctx.fillStyle = '#0a0500';
+    for (let side = -1; side <= 1; side += 2) {
+      ctx.beginPath();
+      ctx.moveTo(cx, beardY - 8);
+      ctx.quadraticCurveTo(cx + side * 12, beardY - 4, cx + side * 16, beardY + 5);
+      ctx.quadraticCurveTo(cx + side * 10, beardY, cx, beardY - 4);
+      ctx.fill();
+    }
+    ctx.restore();
+  } else if (s.war > 75 && !['zhuge_liang','pang_tong','fa_zheng','xun_yu','xun_you','guo_jia','cheng_yu',
+    'ju_shou','tian_feng','chen_gong','xu_shu','lu_xun','kuai_liang','shen_pei','lu_su',
+    'jiang_wan','ma_su','zhou_yu_sq','zhou_yu_sc','zhong_hui','liu_biao','cai_mao',
+    'zhao_yun','ma_chao','sun_ce','sun_quan','ling_tong','jiang_wei'].includes(id)) {
+    // Short/medium warrior beard
+    ctx.save();
+    const beardDark = '#1a0a00';
+    ctx.fillStyle = beardDark;
+    ctx.globalAlpha = 0.7;
+    ctx.beginPath();
+    ctx.moveTo(cx - jw * 0.6, beardY);
+    ctx.quadraticCurveTo(cx - jw * 0.7, beardY + 8, cx - jw * 0.3, beardY + 12);
+    ctx.quadraticCurveTo(cx, beardY + 14 + rng() * 4, cx + jw * 0.3, beardY + 12);
+    ctx.quadraticCurveTo(cx + jw * 0.7, beardY + 8, cx + jw * 0.6, beardY);
+    ctx.quadraticCurveTo(cx, beardY + 4, cx - jw * 0.6, beardY);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    // Stubble strands
+    for (let i = 0; i < 12; i++) {
+      const bx = cx - jw * 0.4 + rng() * jw * 0.8;
+      ctx.strokeStyle = beardDark;
+      ctx.lineWidth = 0.4;
+      ctx.beginPath();
+      ctx.moveTo(bx, beardY + 2);
+      ctx.lineTo(bx + (rng() - 0.5) * 2, beardY + 8 + rng() * 6);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // Old characters get gray/white beard
+  if (['huang_zhong','yan_yan','huang_gai'].includes(id)) {
+    ctx.save();
+    ctx.fillStyle = '#a0a098';
+    ctx.globalAlpha = 0.6;
+    ctx.beginPath();
+    ctx.moveTo(cx - 10, beardY);
+    ctx.quadraticCurveTo(cx - 12, beardY + 10, cx - 6, beardY + 18);
+    ctx.quadraticCurveTo(cx, beardY + 22, cx + 6, beardY + 18);
+    ctx.quadraticCurveTo(cx + 12, beardY + 10, cx + 10, beardY);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    for (let i = 0; i < 15; i++) {
+      ctx.strokeStyle = rng() > 0.5 ? '#c0c0b8' : '#888880';
+      ctx.lineWidth = 0.5;
+      const bx = cx - 8 + rng() * 16;
+      ctx.beginPath();
+      ctx.moveTo(bx, beardY + 2);
+      ctx.lineTo(bx + (rng() - 0.5) * 3, beardY + 14 + rng() * 8);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+}
+
+// ==================== EARS ====================
+function drawEars(ctx, general, cx, cy, fw, fh, skinBase, skinShadow) {
+  const id = general.id;
+  const earH = id === 'liu_bei' ? 14 : 8; // Liu Bei's big ears
+  const earW = id === 'liu_bei' ? 7 : 5;
+
+  for (let side = -1; side <= 1; side += 2) {
+    const ex = cx + side * (fw + 1);
+    const ey = cy - 1;
+
+    ctx.fillStyle = skinBase;
+    ctx.beginPath();
+    ctx.ellipse(ex + side * 2, ey, earW * 0.5, earH * 0.5, side * 0.15, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = skinShadow;
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+
+    // Inner ear
+    ctx.fillStyle = skinShadow;
+    ctx.beginPath();
+    ctx.ellipse(ex + side * 2.5, ey, earW * 0.25, earH * 0.3, side * 0.15, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// ==================== HAIR ====================
+function drawHair(ctx, general, cx, cy, fw, fh, rng) {
+  const p = general.portrait;
+  const id = general.id;
+  const hairColor = getHairColor(general, rng);
+  const hairLight = lightenColor(hairColor, 30);
+  const hairDark = darkenColor(hairColor, 30);
+  const topY = cy - fh + 2;
+
+  ctx.save();
+
+  // Zhuge Liang's special guanyin hat
+  if (id === 'zhuge_liang') {
+    drawZhugeLiangHat(ctx, cx, cy, fw, fh, rng);
+    ctx.restore();
+    return;
+  }
+
+  // Lv Bu's pheasant headdress
+  if (id === 'lv_bu' || id === 'lv_bu_dz') {
+    drawLvBuHeaddress(ctx, cx, cy, fw, fh, rng);
+    ctx.restore();
+    return;
+  }
+
+  // Xiang Yu's warrior crown
+  if (id === 'xiang_yu') {
+    drawXiangYuCrown(ctx, cx, cy, fw, fh, rng);
+    ctx.restore();
+    return;
+  }
+
+  switch(p.hair) {
+    case 'short':
+      // Short cropped hair
+      ctx.fillStyle = hairColor;
+      ctx.beginPath();
+      ctx.moveTo(cx - fw - 3, cy - 4);
+      ctx.quadraticCurveTo(cx - fw - 5, topY - 6, cx - fw * 0.3, topY - 12);
+      ctx.quadraticCurveTo(cx, topY - 16, cx + fw * 0.3, topY - 12);
+      ctx.quadraticCurveTo(cx + fw + 5, topY - 6, cx + fw + 3, cy - 4);
+      ctx.quadraticCurveTo(cx + fw + 1, cy - 6, cx + fw, cy - 8);
+      ctx.lineTo(cx + fw - 1, topY - 2);
+      ctx.quadraticCurveTo(cx, topY - 10, cx - fw + 1, topY - 2);
+      ctx.lineTo(cx - fw, cy - 8);
+      ctx.quadraticCurveTo(cx - fw - 1, cy - 6, cx - fw - 3, cy - 4);
+      ctx.fill();
+
+      // Hair texture
+      for (let i = 0; i < 20; i++) {
+        const hx = cx - fw + rng() * fw * 2;
+        const hy = topY - 12 + rng() * 10;
+        ctx.strokeStyle = rng() > 0.5 ? hairLight : hairDark;
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(hx, hy);
+        ctx.lineTo(hx + (rng() - 0.5) * 3, hy + 3 + rng() * 4);
+        ctx.stroke();
+      }
+      break;
+
+    case 'long':
+      // Long flowing hair
+      ctx.fillStyle = hairColor;
+      // Top/crown
+      ctx.beginPath();
+      ctx.moveTo(cx - fw - 6, cy + 4);
+      ctx.quadraticCurveTo(cx - fw - 8, topY - 4, cx, topY - 16);
+      ctx.quadraticCurveTo(cx + fw + 8, topY - 4, cx + fw + 6, cy + 4);
+      ctx.lineTo(cx + fw + 1, cy - 6);
+      ctx.quadraticCurveTo(cx, topY - 10, cx - fw - 1, cy - 6);
+      ctx.closePath();
+      ctx.fill();
+
+      // Side hair flowing down
+      for (let side = -1; side <= 1; side += 2) {
+        ctx.fillStyle = side === -1 ? hairColor : hairDark;
+        ctx.beginPath();
+        const sx = cx + side * (fw + 4);
+        ctx.moveTo(sx, topY - 2);
+        ctx.quadraticCurveTo(sx + side * 4, cy + 10, sx + side * 2, cy + fh + 20);
+        ctx.quadraticCurveTo(sx + side * 1, cy + fh + 22, sx - side * 1, cy + fh + 18);
+        ctx.quadraticCurveTo(sx, cy + 8, sx - side * 2, topY + 2);
+        ctx.closePath();
+        ctx.fill();
+
+        // Hair strand details
+        for (let i = 0; i < 10; i++) {
+          const hy = topY + rng() * (fh * 2 + 15);
+          ctx.strokeStyle = rng() > 0.5 ? hairLight : hairDark;
+          ctx.lineWidth = 0.4;
+          ctx.beginPath();
+          ctx.moveTo(sx + side * rng() * 3, hy);
+          ctx.lineTo(sx + side * (rng() * 3 + 1), hy + 6 + rng() * 6);
+          ctx.stroke();
+        }
+      }
+      break;
+
+    case 'bun':
+      // Tied up bun with visible front hair
+      ctx.fillStyle = hairColor;
+      // Front hair
+      ctx.beginPath();
+      ctx.moveTo(cx - fw - 3, cy - 5);
+      ctx.quadraticCurveTo(cx - fw - 5, topY - 6, cx - fw * 0.3, topY - 13);
+      ctx.quadraticCurveTo(cx, topY - 17, cx + fw * 0.3, topY - 13);
+      ctx.quadraticCurveTo(cx + fw + 5, topY - 6, cx + fw + 3, cy - 5);
+      ctx.lineTo(cx + fw, cy - 8);
+      ctx.quadraticCurveTo(cx, topY - 11, cx - fw, cy - 8);
+      ctx.closePath();
+      ctx.fill();
+
+      // Bun on top
+      ctx.fillStyle = hairDark;
+      drawEllipse(ctx, cx, topY - 16, 8, 7);
+      ctx.fill();
+      ctx.fillStyle = hairColor;
+      drawEllipse(ctx, cx - 1, topY - 17, 7, 6);
+      ctx.fill();
+
+      // Bun wrap/tie
+      ctx.fillStyle = darken(general.portrait.color, 20);
+      ctx.fillRect(cx - 5, topY - 12, 10, 3);
+
+      // Hair pin
+      ctx.strokeStyle = '#c0b080';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(cx - 8, topY - 16);
+      ctx.lineTo(cx + 8, topY - 16);
+      ctx.stroke();
+      ctx.fillStyle = '#e0d0a0';
+      drawEllipse(ctx, cx + 8, topY - 16, 1.5, 1.5);
+      ctx.fill();
+      break;
+
+    case 'wild':
+      // Wild unkempt hair
+      ctx.fillStyle = hairColor;
+      ctx.beginPath();
+      ctx.moveTo(cx - fw - 8, cy + 6);
+      ctx.quadraticCurveTo(cx - fw - 12, topY, cx - fw * 0.5, topY - 18);
+      ctx.quadraticCurveTo(cx - 2, topY - 22, cx, topY - 20);
+      ctx.quadraticCurveTo(cx + 2, topY - 22, cx + fw * 0.5, topY - 18);
+      ctx.quadraticCurveTo(cx + fw + 12, topY, cx + fw + 8, cy + 6);
+      ctx.lineTo(cx + fw + 1, cy - 4);
+      ctx.quadraticCurveTo(cx, topY - 12, cx - fw - 1, cy - 4);
+      ctx.closePath();
+      ctx.fill();
+
+      // Wild spikes and strands
+      for (let i = 0; i < 30; i++) {
+        const angle = -Math.PI * 0.8 + rng() * Math.PI * 1.6;
+        const dist = fw + 4 + rng() * 12;
+        const startDist = fw + rng() * 3;
+        const sx = cx + Math.cos(angle) * startDist;
+        const sy = (topY - 5) + Math.sin(angle) * startDist * 0.7;
+        const ex = cx + Math.cos(angle) * dist;
+        const ey = (topY - 5) + Math.sin(angle) * dist * 0.7;
+        ctx.strokeStyle = rng() > 0.3 ? hairColor : hairLight;
+        ctx.lineWidth = 0.8 + rng() * 1.5;
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.quadraticCurveTo(
+          (sx + ex) / 2 + (rng() - 0.5) * 6,
+          (sy + ey) / 2 + (rng() - 0.5) * 4,
+          ex, ey
+        );
+        ctx.stroke();
+      }
+
+      // Side hair
+      for (let side = -1; side <= 1; side += 2) {
+        ctx.fillStyle = side === -1 ? hairColor : hairDark;
+        ctx.beginPath();
+        const sx = cx + side * (fw + 5);
+        ctx.moveTo(sx, topY + 2);
+        ctx.quadraticCurveTo(sx + side * 6, cy, sx + side * 4, cy + fh + 8);
+        ctx.quadraticCurveTo(sx + side * 2, cy + fh + 5, sx - side * 1, cy + 5);
+        ctx.closePath();
+        ctx.fill();
+      }
+      break;
+
+    case 'bald':
+      // Bald / very short
+      ctx.fillStyle = hairColor;
+      ctx.globalAlpha = 0.3;
+      ctx.beginPath();
+      ctx.moveTo(cx - fw - 1, cy - 6);
+      ctx.quadraticCurveTo(cx - fw - 2, topY - 4, cx, topY - 12);
+      ctx.quadraticCurveTo(cx + fw + 2, topY - 4, cx + fw + 1, cy - 6);
+      ctx.quadraticCurveTo(cx, topY - 8, cx - fw - 1, cy - 6);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      // Slight stubble
+      for (let i = 0; i < 15; i++) {
+        const hx = cx - fw + rng() * fw * 2;
+        const hy = topY - 8 + rng() * 6;
+        ctx.fillStyle = hairColor;
+        ctx.globalAlpha = 0.2;
+        ctx.fillRect(hx, hy, 1, 1);
+      }
+      ctx.globalAlpha = 1;
+
+      // Skin-tone forehead
+      const skinTone = (id === 'guan_yu') ? '#c85050' : '#e8c090';
+      ctx.fillStyle = skinTone;
+      ctx.globalAlpha = 0.4;
+      ctx.beginPath();
+      ctx.moveTo(cx - fw, cy - 6);
+      ctx.quadraticCurveTo(cx, topY - 10, cx + fw, cy - 6);
+      ctx.quadraticCurveTo(cx, topY - 6, cx - fw, cy - 6);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      break;
+  }
+
+  ctx.restore();
+}
+
+function getHairColor(general, rng) {
+  const id = general.id;
+  // Old characters: gray
+  if (['huang_zhong','yan_yan','huang_gai'].includes(id)) return '#808078';
+  // Most characters: black
+  return '#1a0a00';
+}
+
+function lightenColor(base, amt) {
+  // Approximate lighten for non-hex strings
+  if (base.startsWith('#')) return lighten(base, amt);
+  return base; // fallback
+}
+
+function darkenColor(base, amt) {
+  if (base.startsWith('#')) return darken(base, amt);
+  return base;
+}
+
+// ==================== SPECIAL HEADGEAR ====================
+function drawZhugeLiangHat(ctx, cx, cy, fw, fh, rng) {
+  const topY = cy - fh + 2;
+  const hairColor = '#1a0a00';
+
+  // Base hair showing at temples
+  ctx.fillStyle = hairColor;
+  ctx.beginPath();
+  ctx.moveTo(cx - fw - 2, cy - 5);
+  ctx.quadraticCurveTo(cx - fw - 3, topY - 2, cx, topY - 10);
+  ctx.quadraticCurveTo(cx + fw + 3, topY - 2, cx + fw + 2, cy - 5);
+  ctx.lineTo(cx + fw, cy - 7);
+  ctx.quadraticCurveTo(cx, topY - 6, cx - fw, cy - 7);
+  ctx.closePath();
+  ctx.fill();
+
+  // Lunin (纶巾) - tall cloth hat
+  const hatGrad = ctx.createLinearGradient(cx - 15, topY - 30, cx + 15, topY);
+  hatGrad.addColorStop(0, '#f0e8d0');
+  hatGrad.addColorStop(0.5, '#e8dcc0');
+  hatGrad.addColorStop(1, '#d0c4a0');
+  ctx.fillStyle = hatGrad;
+  ctx.beginPath();
+  ctx.moveTo(cx - 14, topY - 4);
+  ctx.quadraticCurveTo(cx - 16, topY - 20, cx - 8, topY - 32);
+  ctx.quadraticCurveTo(cx, topY - 36, cx + 8, topY - 32);
+  ctx.quadraticCurveTo(cx + 16, topY - 20, cx + 14, topY - 4);
+  ctx.closePath();
+  ctx.fill();
+
+  // Hat border
+  ctx.strokeStyle = '#a09070';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Hat vertical fold line
+  ctx.strokeStyle = '#c0b490';
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.moveTo(cx, topY - 34);
+  ctx.lineTo(cx, topY - 6);
+  ctx.stroke();
+
+  // Hat band
+  ctx.fillStyle = '#8b7355';
+  ctx.fillRect(cx - 14, topY - 6, 28, 4);
+  ctx.strokeStyle = '#6b5535';
+  ctx.strokeRect(cx - 14, topY - 6, 28, 4);
+
+  // Ribbons flowing from hat
+  for (let side = -1; side <= 1; side += 2) {
+    ctx.strokeStyle = '#d0c4a0';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx + side * 14, topY - 3);
+    ctx.quadraticCurveTo(cx + side * 20, topY + 10, cx + side * 18, topY + 25);
+    ctx.stroke();
+    ctx.strokeStyle = '#e0d4b0';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx + side * 13, topY - 3);
+    ctx.quadraticCurveTo(cx + side * 19, topY + 10, cx + side * 17, topY + 25);
+    ctx.stroke();
+  }
+}
+
+function drawLvBuHeaddress(ctx, cx, cy, fw, fh, rng) {
+  const topY = cy - fh + 2;
+  const hairColor = '#1a0a00';
+
+  // Base hair
+  ctx.fillStyle = hairColor;
+  ctx.beginPath();
+  ctx.moveTo(cx - fw - 4, cy + 2);
+  ctx.quadraticCurveTo(cx - fw - 6, topY - 2, cx, topY - 14);
+  ctx.quadraticCurveTo(cx + fw + 6, topY - 2, cx + fw + 4, cy + 2);
+  ctx.lineTo(cx + fw, cy - 6);
+  ctx.quadraticCurveTo(cx, topY - 8, cx - fw, cy - 6);
+  ctx.closePath();
+  ctx.fill();
+
+  // Side flowing hair
+  for (let side = -1; side <= 1; side += 2) {
+    ctx.fillStyle = side === -1 ? hairColor : '#2a1500';
+    ctx.beginPath();
+    ctx.moveTo(cx + side * (fw + 3), topY);
+    ctx.quadraticCurveTo(cx + side * (fw + 7), cy + 5, cx + side * (fw + 5), cy + fh + 15);
+    ctx.quadraticCurveTo(cx + side * (fw + 3), cy + fh + 12, cx + side * (fw + 1), cy + 3);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Ornate headdress base (golden crown)
+  const crownGrad = ctx.createLinearGradient(cx - 16, topY - 20, cx + 16, topY - 5);
+  crownGrad.addColorStop(0, '#ffd700');
+  crownGrad.addColorStop(0.3, '#daa520');
+  crownGrad.addColorStop(0.7, '#b8860b');
+  crownGrad.addColorStop(1, '#8b6914');
+
+  ctx.fillStyle = crownGrad;
+  ctx.beginPath();
+  ctx.moveTo(cx - 16, topY - 6);
+  ctx.lineTo(cx - 14, topY - 18);
+  ctx.quadraticCurveTo(cx, topY - 22, cx + 14, topY - 18);
+  ctx.lineTo(cx + 16, topY - 6);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#8b6914';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Crown center gem
+  ctx.fillStyle = '#ff2020';
+  drawEllipse(ctx, cx, topY - 13, 3, 3);
+  ctx.fill();
+  ctx.strokeStyle = '#ffd700';
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+  // Gem highlight
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  drawEllipse(ctx, cx - 0.8, topY - 14, 1, 1);
+  ctx.fill();
+
+  // Pheasant tail feathers (方天画戟 style)
+  for (let side = -1; side <= 1; side += 2) {
+    // Main feather
+    const featherGrad = ctx.createLinearGradient(cx, topY - 18, cx + side * 20, topY - 45);
+    featherGrad.addColorStop(0, '#ff6040');
+    featherGrad.addColorStop(0.3, '#ff4020');
+    featherGrad.addColorStop(0.6, '#e03010');
+    featherGrad.addColorStop(1, '#c02008');
+
+    ctx.fillStyle = featherGrad;
+    ctx.beginPath();
+    ctx.moveTo(cx + side * 4, topY - 18);
+    ctx.quadraticCurveTo(cx + side * 8, topY - 30, cx + side * 18, topY - 46);
+    ctx.quadraticCurveTo(cx + side * 22, topY - 48, cx + side * 20, topY - 42);
+    ctx.quadraticCurveTo(cx + side * 14, topY - 28, cx + side * 8, topY - 16);
+    ctx.closePath();
+    ctx.fill();
+
+    // Feather details
+    ctx.strokeStyle = '#ffd700';
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(cx + side * 6, topY - 20);
+    ctx.quadraticCurveTo(cx + side * 12, topY - 32, cx + side * 19, topY - 44);
+    ctx.stroke();
+
+    // Feather eye pattern
+    ctx.fillStyle = '#ffd700';
+    drawEllipse(ctx, cx + side * 14, topY - 36, 2, 3);
+    ctx.fill();
+    ctx.fillStyle = '#4040ff';
+    drawEllipse(ctx, cx + side * 14, topY - 36, 1, 1.5);
+    ctx.fill();
+  }
+
+  // Crown edge decoration
+  ctx.fillStyle = '#ffd700';
+  for (let i = -2; i <= 2; i++) {
+    const dx = cx + i * 6;
+    ctx.beginPath();
+    ctx.moveTo(dx - 2, topY - 6);
+    ctx.lineTo(dx, topY - 10);
+    ctx.lineTo(dx + 2, topY - 6);
+    ctx.fill();
+  }
+}
+
+function drawXiangYuCrown(ctx, cx, cy, fw, fh, rng) {
+  const topY = cy - fh + 2;
+  const hairColor = '#1a0a00';
+
+  // Wild base hair
+  ctx.fillStyle = hairColor;
+  ctx.beginPath();
+  ctx.moveTo(cx - fw - 8, cy + 6);
+  ctx.quadraticCurveTo(cx - fw - 12, topY, cx - fw * 0.5, topY - 18);
+  ctx.quadraticCurveTo(cx - 2, topY - 22, cx, topY - 20);
+  ctx.quadraticCurveTo(cx + 2, topY - 22, cx + fw * 0.5, topY - 18);
+  ctx.quadraticCurveTo(cx + fw + 12, topY, cx + fw + 8, cy + 6);
+  ctx.lineTo(cx + fw + 1, cy - 4);
+  ctx.quadraticCurveTo(cx, topY - 12, cx - fw - 1, cy - 4);
+  ctx.closePath();
+  ctx.fill();
+
+  // Side hair flowing down fiercely
+  for (let side = -1; side <= 1; side += 2) {
+    ctx.fillStyle = side === -1 ? hairColor : '#2a1500';
+    ctx.beginPath();
+    const sx = cx + side * (fw + 5);
+    ctx.moveTo(sx, topY + 2);
+    ctx.quadraticCurveTo(sx + side * 7, cy, sx + side * 5, cy + fh + 14);
+    ctx.quadraticCurveTo(sx + side * 3, cy + fh + 10, sx - side * 1, cy + 5);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Wild spikes
+  for (let i = 0; i < 20; i++) {
+    const angle = -Math.PI * 0.8 + rng() * Math.PI * 1.6;
+    const dist = fw + 4 + rng() * 14;
+    const startDist = fw + rng() * 3;
+    const sx = cx + Math.cos(angle) * startDist;
+    const sy = (topY - 5) + Math.sin(angle) * startDist * 0.7;
+    const ex = cx + Math.cos(angle) * dist;
+    const ey = (topY - 5) + Math.sin(angle) * dist * 0.7;
+    ctx.strokeStyle = rng() > 0.3 ? hairColor : '#2a1500';
+    ctx.lineWidth = 0.8 + rng() * 1.5;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.quadraticCurveTo(
+      (sx + ex) / 2 + (rng() - 0.5) * 6,
+      (sy + ey) / 2 + (rng() - 0.5) * 4,
+      ex, ey
+    );
+    ctx.stroke();
+  }
+
+  // Bronze warrior crown (darker, more martial than Lv Bu's gold)
+  const crownGrad = ctx.createLinearGradient(cx - 18, topY - 22, cx + 18, topY - 5);
+  crownGrad.addColorStop(0, '#cd7f32');
+  crownGrad.addColorStop(0.3, '#b87333');
+  crownGrad.addColorStop(0.7, '#a0522d');
+  crownGrad.addColorStop(1, '#8b4513');
+
+  ctx.fillStyle = crownGrad;
+  ctx.beginPath();
+  ctx.moveTo(cx - 18, topY - 6);
+  ctx.lineTo(cx - 16, topY - 20);
+  ctx.lineTo(cx - 8, topY - 16);
+  ctx.lineTo(cx, topY - 26);
+  ctx.lineTo(cx + 8, topY - 16);
+  ctx.lineTo(cx + 16, topY - 20);
+  ctx.lineTo(cx + 18, topY - 6);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#5a2d0c';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Crown center jewel (blood red)
+  ctx.fillStyle = '#cc0000';
+  drawEllipse(ctx, cx, topY - 18, 3.5, 3.5);
+  ctx.fill();
+  ctx.strokeStyle = '#cd7f32';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  // Jewel highlight
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  drawEllipse(ctx, cx - 1, topY - 19, 1.2, 1.2);
+  ctx.fill();
+
+  // Side jewels
+  for (let side = -1; side <= 1; side += 2) {
+    ctx.fillStyle = '#8b0000';
+    drawEllipse(ctx, cx + side * 12, topY - 13, 2, 2);
+    ctx.fill();
+  }
+
+  // Crown band
+  ctx.fillStyle = '#8b4513';
+  ctx.fillRect(cx - 18, topY - 7, 36, 3);
+  ctx.strokeStyle = '#cd7f32';
+  ctx.lineWidth = 0.6;
+  ctx.strokeRect(cx - 18, topY - 7, 36, 3);
+}
+
+// ==================== ARMOR ====================
+function drawArmor(ctx, general, cx, cy, fh, fw, rng) {
+  const p = general.portrait;
+  const id = general.id;
+  const color = p.color;
+  const armorTop = cy + fh + 4;
+
+  ctx.save();
+
+  switch(p.armor) {
+    case 'heavy':
+      drawHeavyArmor(ctx, general, cx, armorTop, color, fw, rng);
+      break;
+    case 'medium':
+      drawMediumArmor(ctx, general, cx, armorTop, color, fw, rng);
+      break;
+    case 'light':
+      drawLightArmor(ctx, general, cx, armorTop, color, fw, rng);
+      break;
+    case 'robe':
+      drawRobe(ctx, general, cx, armorTop, color, fw, rng);
+      break;
+  }
+
+  ctx.restore();
+}
+
+function drawHeavyArmor(ctx, general, cx, armorTop, color, fw, rng) {
+  const id = general.id;
+  const W = 128, H = 128;
+
+  // Shoulder armor (pauldrons)
+  for (let side = -1; side <= 1; side += 2) {
+    const sx = cx + side * 38;
+    const sy = armorTop + 6;
+
+    // Pauldron shape
+    const pauldGrad = ctx.createRadialGradient(sx - side * 5, sy - 3, 2, sx, sy, 22);
+    pauldGrad.addColorStop(0, lighten(color, 60));
+    pauldGrad.addColorStop(0.4, lighten(color, 20));
+    pauldGrad.addColorStop(0.8, color);
+    pauldGrad.addColorStop(1, darken(color, 40));
+
+    ctx.fillStyle = pauldGrad;
+    ctx.beginPath();
+    ctx.moveTo(cx + side * 16, armorTop - 2);
+    ctx.quadraticCurveTo(sx - side * 5, armorTop - 8, sx + side * 8, armorTop + 2);
+    ctx.quadraticCurveTo(sx + side * 12, armorTop + 14, sx + side * 5, armorTop + 22);
+    ctx.quadraticCurveTo(sx - side * 2, armorTop + 26, cx + side * 16, armorTop + 18);
+    ctx.closePath();
+    ctx.fill();
+
+    // Pauldron edge
+    ctx.strokeStyle = darken(color, 50);
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Metal trim on pauldron
+    ctx.strokeStyle = lighten(color, 80);
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(cx + side * 18, armorTop);
+    ctx.quadraticCurveTo(sx - side * 3, armorTop - 5, sx + side * 6, armorTop + 4);
+    ctx.stroke();
+
+    // Rivets
+    for (let i = 0; i < 3; i++) {
+      const rx = cx + side * (20 + i * 7);
+      const ry = armorTop + 2 + i * 4;
+      ctx.fillStyle = lighten(color, 70);
+      drawEllipse(ctx, rx, ry, 1.2, 1.2);
+      ctx.fill();
+    }
+  }
+
+  // Main chest armor
+  const chestGrad = ctx.createLinearGradient(cx - 30, armorTop, cx + 30, H);
+  chestGrad.addColorStop(0, lighten(color, 30));
+  chestGrad.addColorStop(0.3, color);
+  chestGrad.addColorStop(0.7, darken(color, 20));
+  chestGrad.addColorStop(1, darken(color, 50));
+
+  ctx.fillStyle = chestGrad;
+  ctx.beginPath();
+  ctx.moveTo(cx - 28, armorTop - 2);
+  ctx.quadraticCurveTo(cx - 30, armorTop + 5, cx - 35, H);
+  ctx.lineTo(cx + 35, H);
+  ctx.quadraticCurveTo(cx + 30, armorTop + 5, cx + 28, armorTop - 2);
+  ctx.quadraticCurveTo(cx, armorTop + 4, cx - 28, armorTop - 2);
+  ctx.fill();
+
+  // Collar / neckline
+  ctx.strokeStyle = lighten(color, 50);
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(cx - 16, armorTop - 4);
+  ctx.quadraticCurveTo(cx, armorTop + 2, cx + 16, armorTop - 4);
+  ctx.stroke();
+
+  // Center chest plate detail
+  ctx.strokeStyle = lighten(color, 40);
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(cx, armorTop + 2);
+  ctx.lineTo(cx, H);
+  ctx.stroke();
+
+  // Cross pattern on chest
+  ctx.strokeStyle = lighten(color, 20);
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.moveTo(cx - 20, armorTop + 14);
+  ctx.lineTo(cx + 20, armorTop + 14);
+  ctx.stroke();
+
+  // Special: Zhao Yun silver armor with blue accents
+  if (id === 'zhao_yun') {
+    ctx.strokeStyle = '#4488cc';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(cx - 12, armorTop + 4);
+    ctx.lineTo(cx, armorTop + 10);
+    ctx.lineTo(cx + 12, armorTop + 4);
+    ctx.stroke();
+    // Blue gems
+    ctx.fillStyle = '#2266bb';
+    drawEllipse(ctx, cx, armorTop + 10, 2, 2);
+    ctx.fill();
+    ctx.fillStyle = '#66aaff';
+    drawEllipse(ctx, cx - 0.5, armorTop + 9.5, 0.8, 0.8);
+    ctx.fill();
+  }
+
+  // Special: Dian Wei bare-chest feel
+  if (id === 'dian_wei' || id === 'xu_chu') {
+    // Show more skin at the collar
+    ctx.fillStyle = '#c8a070';
+    ctx.beginPath();
+    ctx.moveTo(cx - 14, armorTop - 4);
+    ctx.quadraticCurveTo(cx, armorTop + 8, cx + 14, armorTop - 4);
+    ctx.quadraticCurveTo(cx, armorTop + 2, cx - 14, armorTop - 4);
+    ctx.fill();
+  }
+}
+
+function drawMediumArmor(ctx, general, cx, armorTop, color, fw, rng) {
+  const H = 128;
+
+  // Leather armor body
+  const bodyGrad = ctx.createLinearGradient(cx - 25, armorTop, cx + 25, H);
+  bodyGrad.addColorStop(0, lighten(color, 20));
+  bodyGrad.addColorStop(0.5, color);
+  bodyGrad.addColorStop(1, darken(color, 30));
+
+  ctx.fillStyle = bodyGrad;
+  ctx.beginPath();
+  ctx.moveTo(cx - 24, armorTop - 2);
+  ctx.quadraticCurveTo(cx - 28, armorTop + 10, cx - 32, H);
+  ctx.lineTo(cx + 32, H);
+  ctx.quadraticCurveTo(cx + 28, armorTop + 10, cx + 24, armorTop - 2);
+  ctx.quadraticCurveTo(cx, armorTop + 4, cx - 24, armorTop - 2);
+  ctx.fill();
+
+  // Shoulders (smaller than heavy)
+  for (let side = -1; side <= 1; side += 2) {
+    ctx.fillStyle = darken(color, 15);
+    ctx.beginPath();
+    ctx.moveTo(cx + side * 14, armorTop - 2);
+    ctx.quadraticCurveTo(cx + side * 30, armorTop - 4, cx + side * 34, armorTop + 10);
+    ctx.quadraticCurveTo(cx + side * 30, armorTop + 18, cx + side * 14, armorTop + 14);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Collar
+  ctx.strokeStyle = lighten(color, 40);
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(cx - 14, armorTop - 4);
+  ctx.quadraticCurveTo(cx, armorTop + 3, cx + 14, armorTop - 4);
+  ctx.stroke();
+
+  // Leather strap details
+  ctx.strokeStyle = darken(color, 40);
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 3; i++) {
+    const y = armorTop + 8 + i * 8;
+    ctx.beginPath();
+    ctx.moveTo(cx - 18, y);
+    ctx.lineTo(cx + 18, y);
+    ctx.stroke();
+  }
+}
+
+function drawLightArmor(ctx, general, cx, armorTop, color, fw, rng) {
+  const H = 128;
+
+  // Light cloth with some armor
+  const bodyGrad = ctx.createLinearGradient(cx, armorTop, cx, H);
+  bodyGrad.addColorStop(0, lighten(color, 25));
+  bodyGrad.addColorStop(1, darken(color, 20));
+
+  ctx.fillStyle = bodyGrad;
+  ctx.beginPath();
+  ctx.moveTo(cx - 22, armorTop - 2);
+  ctx.quadraticCurveTo(cx - 26, armorTop + 10, cx - 30, H);
+  ctx.lineTo(cx + 30, H);
+  ctx.quadraticCurveTo(cx + 26, armorTop + 10, cx + 22, armorTop - 2);
+  ctx.quadraticCurveTo(cx, armorTop + 5, cx - 22, armorTop - 2);
+  ctx.fill();
+
+  // V-neck collar
+  ctx.strokeStyle = lighten(color, 50);
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(cx - 12, armorTop - 4);
+  ctx.lineTo(cx, armorTop + 6);
+  ctx.lineTo(cx + 12, armorTop - 4);
+  ctx.stroke();
+
+  // Shoulder cloth
+  for (let side = -1; side <= 1; side += 2) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(cx + side * 12, armorTop - 2);
+    ctx.quadraticCurveTo(cx + side * 24, armorTop - 2, cx + side * 28, armorTop + 8);
+    ctx.quadraticCurveTo(cx + side * 24, armorTop + 14, cx + side * 12, armorTop + 10);
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+function drawRobe(ctx, general, cx, armorTop, color, fw, rng) {
+  const id = general.id;
+  const H = 128;
+
+  // Scholar's robe
+  const robeGrad = ctx.createLinearGradient(cx - 30, armorTop, cx + 30, H);
+  robeGrad.addColorStop(0, lighten(color, 30));
+  robeGrad.addColorStop(0.3, lighten(color, 15));
+  robeGrad.addColorStop(0.7, color);
+  robeGrad.addColorStop(1, darken(color, 25));
+
+  ctx.fillStyle = robeGrad;
+  ctx.beginPath();
+  ctx.moveTo(cx - 22, armorTop - 3);
+  ctx.quadraticCurveTo(cx - 28, armorTop + 10, cx - 34, H);
+  ctx.lineTo(cx + 34, H);
+  ctx.quadraticCurveTo(cx + 28, armorTop + 10, cx + 22, armorTop - 3);
+  ctx.quadraticCurveTo(cx, armorTop + 3, cx - 22, armorTop - 3);
+  ctx.fill();
+
+  // Robe collar (crossed Chinese style)
+  ctx.fillStyle = lighten(color, 40);
+  // Left collar
+  ctx.beginPath();
+  ctx.moveTo(cx - 14, armorTop - 5);
+  ctx.lineTo(cx - 2, armorTop + 12);
+  ctx.lineTo(cx + 4, armorTop + 10);
+  ctx.lineTo(cx - 8, armorTop - 5);
+  ctx.closePath();
+  ctx.fill();
+  // Right collar
+  ctx.beginPath();
+  ctx.moveTo(cx + 14, armorTop - 5);
+  ctx.lineTo(cx + 2, armorTop + 12);
+  ctx.lineTo(cx - 4, armorTop + 10);
+  ctx.lineTo(cx + 8, armorTop - 5);
+  ctx.closePath();
+  ctx.fill();
+
+  // Collar outline
+  ctx.strokeStyle = darken(color, 30);
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.moveTo(cx - 14, armorTop - 5);
+  ctx.lineTo(cx, armorTop + 12);
+  ctx.lineTo(cx + 14, armorTop - 5);
+  ctx.stroke();
+
+  // Belt/sash
+  ctx.fillStyle = darken(color, 20);
+  ctx.fillRect(cx - 22, armorTop + 14, 44, 4);
+
+  // Robe fold lines
+  ctx.strokeStyle = darken(color, 15);
+  ctx.lineWidth = 0.5;
+  ctx.globalAlpha = 0.4;
+  ctx.beginPath();
+  ctx.moveTo(cx - 8, armorTop + 18);
+  ctx.lineTo(cx - 12, H);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(cx + 8, armorTop + 18);
+  ctx.lineTo(cx + 12, H);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  // Shoulder drape
+  for (let side = -1; side <= 1; side += 2) {
+    ctx.fillStyle = side === -1 ? lighten(color, 10) : darken(color, 5);
+    ctx.beginPath();
+    ctx.moveTo(cx + side * 12, armorTop - 3);
+    ctx.quadraticCurveTo(cx + side * 22, armorTop - 1, cx + side * 26, armorTop + 10);
+    ctx.quadraticCurveTo(cx + side * 22, armorTop + 16, cx + side * 12, armorTop + 12);
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+// ==================== SPECIAL FEATURES ====================
+function drawSpecial(ctx, general, cx, cy, fw, fh, rng) {
+  const id = general.id;
+
+  // Zhuge Liang: feather fan hint
+  if (id === 'zhuge_liang') {
+    ctx.save();
+    // Fan suggestion at bottom right
+    const fanX = cx + 22;
+    const fanY = cy + fh + 22;
+    ctx.fillStyle = 'rgba(240,240,220,0.6)';
+    for (let i = -3; i <= 3; i++) {
+      const angle = -0.5 + i * 0.15;
+      ctx.beginPath();
+      ctx.moveTo(fanX, fanY);
+      ctx.lineTo(fanX + Math.cos(angle) * 16, fanY + Math.sin(angle) * 16 - 10);
+      ctx.lineTo(fanX + Math.cos(angle + 0.08) * 16, fanY + Math.sin(angle + 0.08) * 16 - 10);
+      ctx.closePath();
+      ctx.fill();
+    }
+    // Fan handle
+    ctx.strokeStyle = '#8b7355';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(fanX, fanY);
+    ctx.lineTo(fanX + 2, fanY + 10);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Zhou Tai: scars
+  if (id === 'zhou_tai') {
+    ctx.strokeStyle = 'rgba(180,100,100,0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(cx + 8, cy - 8);
+    ctx.lineTo(cx + 12, cy + 6);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx - 5, cy + 2);
+    ctx.lineTo(cx - 2, cy + 12);
+    ctx.stroke();
+  }
+
+  // Xiang Yu: battle aura and scar
+  if (id === 'xiang_yu') {
+    // Red battle aura glow
+    ctx.save();
+    ctx.globalAlpha = 0.08;
+    const auraGrad = ctx.createRadialGradient(cx, cy, 10, cx, cy, 60);
+    auraGrad.addColorStop(0, '#ff0000');
+    auraGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = auraGrad;
+    ctx.fillRect(0, 0, 128, 128);
+    ctx.globalAlpha = 1;
+    // Battle scar on right cheek
+    ctx.strokeStyle = 'rgba(200,80,80,0.6)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(cx + 12, cy - 4);
+    ctx.lineTo(cx + 16, cy + 8);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Gan Ning: bells on armor hint
+  if (id === 'gan_ning') {
+    for (let i = -1; i <= 1; i++) {
+      ctx.fillStyle = '#ffd700';
+      drawEllipse(ctx, cx + i * 12, cy + fh + 8, 2, 2.5);
+      ctx.fill();
+      ctx.fillStyle = '#b8860b';
+      drawEllipse(ctx, cx + i * 12, cy + fh + 10, 1.5, 0.8);
+      ctx.fill();
+    }
+  }
+}
+
+// ==================== BORDER ====================
+function drawBorder(ctx, W, H) {
+  // Outer gold border
+  ctx.strokeStyle = '#daa520';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(1.5, 1.5, W - 3, H - 3);
+
+  // Inner gold border
+  ctx.strokeStyle = '#b8860b';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(4, 4, W - 8, H - 8);
+
+  // Corner decorations
+  const corners = [[6,6],[W-6,6],[6,H-6],[W-6,H-6]];
+  for (const [cx, cy] of corners) {
+    ctx.fillStyle = '#ffd700';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#8b6914';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 1, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Corner L-shapes
+  const cSize = 10;
+  ctx.strokeStyle = '#daa520';
+  ctx.lineWidth = 1;
+  // Top-left
+  ctx.beginPath();
+  ctx.moveTo(6, 6 + cSize); ctx.lineTo(6, 6); ctx.lineTo(6 + cSize, 6);
+  ctx.stroke();
+  // Top-right
+  ctx.beginPath();
+  ctx.moveTo(W - 6 - cSize, 6); ctx.lineTo(W - 6, 6); ctx.lineTo(W - 6, 6 + cSize);
+  ctx.stroke();
+  // Bottom-left
+  ctx.beginPath();
+  ctx.moveTo(6, H - 6 - cSize); ctx.lineTo(6, H - 6); ctx.lineTo(6 + cSize, H - 6);
+  ctx.stroke();
+  // Bottom-right
+  ctx.beginPath();
+  ctx.moveTo(W - 6 - cSize, H - 6); ctx.lineTo(W - 6, H - 6); ctx.lineTo(W - 6, H - 6 - cSize);
+  ctx.stroke();
+}
+
+// ==================== UI / GENERATION LOGIC ====================
+const generatedBlobs = {};
+
+async function generateAll() {
+  const btnGen = document.getElementById('btnGenerate');
+  const btnDL = document.getElementById('btnDownloadAll');
+  const progressBar = document.getElementById('progressBar');
+  const progressFill = document.getElementById('progressFill');
+  const grid = document.getElementById('grid');
+
+  btnGen.disabled = true;
+  btnDL.disabled = true;
+  progressBar.style.display = 'block';
+  grid.innerHTML = '';
+
+  const total = GENERALS.length;
+
+  for (let i = 0; i < total; i++) {
+    const gen = GENERALS[i];
+
+    // Create card
+    const card = document.createElement('div');
+    card.className = 'card';
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 128;
+    canvas.height = 128;
+
+    const nameDiv = document.createElement('div');
+    nameDiv.className = 'name';
+    nameDiv.textContent = gen.name;
+
+    const idDiv = document.createElement('div');
+    idDiv.className = 'id-text';
+    idDiv.textContent = gen.id;
+
+    const dlBtn = document.createElement('button');
+    dlBtn.className = 'dl-btn';
+    dlBtn.textContent = '下载';
+    dlBtn.onclick = () => downloadSingle(gen.id);
+
+    card.appendChild(canvas);
+    card.appendChild(nameDiv);
+    card.appendChild(idDiv);
+    card.appendChild(dlBtn);
+    grid.appendChild(card);
+
+    // Generate portrait
+    generatePortrait(canvas, gen);
+
+    // Store blob
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    generatedBlobs[gen.id] = blob;
+
+    // Update progress
+    const pct = Math.round(((i + 1) / total) * 100);
+    progressFill.style.width = pct + '%';
+    progressFill.textContent = `${pct}% (${i + 1}/${total})`;
+
+    // Yield to UI every 4 portraits
+    if (i % 4 === 0) {
+      await new Promise(r => setTimeout(r, 0));
+    }
+  }
+
+  btnGen.disabled = false;
+  btnDL.disabled = false;
+  document.getElementById('btnDownloadNew').disabled = false;
+  progressFill.textContent = '完成!';
+}
+
+function downloadSingle(id) {
+  const blob = generatedBlobs[id];
+  if (!blob) return;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = id + '.png';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function downloadAll() {
+  const btnDL = document.getElementById('btnDownloadAll');
+  btnDL.disabled = true;
+  btnDL.textContent = '打包中...';
+
+  const zip = new JSZip();
+  const folder = zip.folder('portraits');
+
+  for (const gen of GENERALS) {
+    const blob = generatedBlobs[gen.id];
+    if (blob) {
+      folder.file(gen.id + '.png', blob);
+    }
+  }
+
+  const content = await zip.generateAsync({ type: 'blob' });
+  const url = URL.createObjectURL(content);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'sango_portraits.zip';
+  a.click();
+  URL.revokeObjectURL(url);
+
+  btnDL.disabled = false;
+  btnDL.textContent = '下载全部 (ZIP)';
+}
+
+// 原有167名将领的id集合
+const ORIGINAL_IDS = new Set([
+  'cao_cao','xiahou_dun','xiahou_yuan','cao_ren','cao_hong','xun_yu','xun_you','guo_jia','cheng_yu','yu_jin',
+  'yue_jin','li_dian','dian_wei','xu_chu','zhang_liao_cc','liu_bei','guan_yu','zhang_fei','zhao_yun','zhuge_liang',
+  'huang_zhong','ma_chao','wei_yan','pang_tong','fa_zheng','jiang_wan','ma_su','sun_quan','zhou_yu_sq','lu_su',
+  'lv_meng','gan_ning','huang_gai','cheng_pu','zhou_tai','taishi_ci','ling_tong','xu_sheng','ding_feng',
+  'yuan_shao','yan_liang','wen_chou','zhang_he_ys','gao_lan','ju_shou','tian_feng','shen_pei','lv_bu','chen_gong',
+  'gao_shun','zhang_liao_lb','dong_zhuo','lv_bu_dz','li_jue','guo_si','hua_xiong','liu_biao','cai_mao','huang_zu',
+  'wen_pin','kuai_liang','sun_ce','zhou_yu_sc','jiang_qin','chen_wu','pang_de','zhang_ren','yan_yan','xu_shu',
+  'jiang_wei','deng_ai','zhong_hui','lu_xun','guan_ping','guan_xing','zhang_bao','wang_ping','liao_hua',
+  'xiang_yu','long_ju','zhongli_mei','fan_zeng','bu_zhi','cao_pi','cao_zhang','cao_chun','cao_xiu','chen_qun',
+  'dong_yun','fu_tong','han_dang','han_sui','he_qi','hou_cheng','jia_xu','jin_xuan','kong_rong','le_jin',
+  'li_yan','liu_feng','liu_zhang','lu_meng','ma_dai','ma_liang','man_chong','meng_da','meng_huo','pan_zhang',
+  'sima_shi','sima_zhao','tai_shi_ci','wang_yi','wu_yi','xia_hou_ba','xia_hou_yuan','xu_huang','xu_zhu',
+  'yuan_shu','zhang_he','zhang_liao','zhang_lu','zhang_song','zhou_yu','zhuge_dan','zhuge_ke','chen_deng',
+  'chunyu_qiong','dailai_dongzhu','fei_yi','feng_ji','gongsun_zan','guan_suo','guo_huai','han_xuan',
+  'huang_quan','huangfu_song','ji_ling','liu_qi','lv_fan','ma_teng','ma_xiu','mi_zhu','niu_fu','niu_jin',
+  'shi_xie','sima_yi','tao_qian','tian_yu','wang_wei','wen_yang','wu_ban','wu_tugu','xin_ping','xu_rong',
+  'yan_gang','yang_feng','yi_ji','yuan_tan','zang_ba','zhang_he_cc','zhang_ji_dz','zhang_xun_ys','zhu_huan',
+  'zhu_jun','zhu_ran','zhu_rong','zhu_zhi'
+]);
+
+async function downloadNew() {
+  const btnDL = document.getElementById('btnDownloadNew');
+  const generated = Object.keys(generatedBlobs).length;
+  if (generated === 0) {
+    alert('请先点击「生成全部肖像」');
+    return;
+  }
+  btnDL.disabled = true;
+  btnDL.textContent = '打包中...';
+
+  const zip = new JSZip();
+  const folder = zip.folder('portraits');
+
+  for (const gen of GENERALS) {
+    if (ORIGINAL_IDS.has(gen.id)) continue; // 跳过原有167名
+    const blob = generatedBlobs[gen.id];
+    if (blob) {
+      folder.file(gen.id + '.png', blob);
+    }
+  }
+
+  const content = await zip.generateAsync({ type: 'blob' });
+  const url = URL.createObjectURL(content);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'sango_portraits_new134.zip';
+  a.click();
+  URL.revokeObjectURL(url);
+
+  btnDL.disabled = false;
+  btnDL.textContent = '仅下载新增134名 (ZIP)';
+}
+</script>
+</body>
+</html>

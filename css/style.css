@@ -1,0 +1,667 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: #000;
+    overflow: hidden;
+    font-family: 'SimHei', 'Microsoft YaHei', 'PingFang SC', sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+#game-container {
+    position: fixed;
+    inset: 0;
+}
+
+#game-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+#ui-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+#ui-layer > * {
+    pointer-events: auto;
+}
+
+/* 通用面板样式 */
+.game-panel {
+    position: absolute;
+    background: linear-gradient(180deg, #2a1a0a 0%, #1a0e04 100%);
+    border: 2px solid #c8a850;
+    border-radius: 4px;
+    color: #e8d8a8;
+    box-shadow: 0 0 10px rgba(0,0,0,0.8), inset 0 0 20px rgba(200,168,80,0.1);
+    font-size: 14px;
+}
+
+.game-panel .panel-title {
+    background: linear-gradient(180deg, #5a3a10 0%, #3a2208 100%);
+    border-bottom: 1px solid #c8a850;
+    padding: 8px 12px;
+    font-size: 16px;
+    font-weight: bold;
+    text-align: center;
+    color: #ffe080;
+    text-shadow: 1px 1px 2px #000;
+}
+
+.game-panel .panel-content {
+    padding: 10px;
+}
+
+/* 按钮样式 */
+.game-btn {
+    display: inline-block;
+    padding: 8px 16px;
+    background: linear-gradient(180deg, #5a3a10 0%, #3a2208 100%);
+    border: 1px solid #c8a850;
+    border-radius: 3px;
+    color: #ffe080;
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+    text-shadow: 1px 1px 1px #000;
+}
+
+.game-btn:hover {
+    background: linear-gradient(180deg, #7a5a20 0%, #5a3a10 100%);
+    border-color: #ffe080;
+    box-shadow: 0 0 8px rgba(255,224,128,0.3);
+}
+
+.game-btn:active {
+    background: linear-gradient(180deg, #3a2208 0%, #5a3a10 100%);
+}
+
+.game-btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.game-btn.primary {
+    background: linear-gradient(180deg, #8a4a10 0%, #6a3208 100%);
+    border-color: #ffc040;
+}
+
+.game-btn.primary:hover {
+    background: linear-gradient(180deg, #aa6a20 0%, #8a4a10 100%);
+}
+
+.game-btn.danger {
+    background: linear-gradient(180deg, #8a2020 0%, #5a1010 100%);
+    border-color: #ff6040;
+    color: #ffb0a0;
+}
+
+/* 主菜单 */
+.menu-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.7);
+}
+
+.menu-title {
+    font-size: 48px;
+    color: #ffe080;
+    text-shadow: 2px 2px 4px #000, 0 0 20px rgba(255,224,128,0.5);
+    margin-bottom: 10px;
+    letter-spacing: 8px;
+}
+
+.menu-subtitle {
+    font-size: 18px;
+    color: #c8a850;
+    margin-bottom: 40px;
+    letter-spacing: 4px;
+}
+
+.menu-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.menu-buttons .game-btn {
+    width: 200px;
+    padding: 12px;
+    font-size: 18px;
+    letter-spacing: 4px;
+}
+
+/* 势力选择 */
+.faction-select {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: rgba(0,0,0,0.85);
+    padding: 30px;
+}
+
+.faction-select h2 {
+    color: #ffe080;
+    font-size: 28px;
+    margin-bottom: 20px;
+    letter-spacing: 4px;
+}
+
+.faction-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 200px);
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.faction-card {
+    background: linear-gradient(180deg, #2a1a0a 0%, #1a0e04 100%);
+    border: 2px solid #555;
+    border-radius: 6px;
+    padding: 15px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+}
+
+.faction-card:hover {
+    border-color: #c8a850;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(200,168,80,0.3);
+}
+
+.faction-card.selected {
+    border-color: #ffe080;
+    box-shadow: 0 0 15px rgba(255,224,128,0.5);
+}
+
+.faction-card .faction-name {
+    font-size: 20px;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.faction-card .faction-title {
+    font-size: 12px;
+    color: #999;
+    margin-bottom: 8px;
+}
+
+.faction-card .faction-desc {
+    font-size: 12px;
+    color: #c8a850;
+}
+
+/* 大地图 HUD */
+.hud-top {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 40px;
+    background: linear-gradient(180deg, rgba(30,15,5,0.95) 0%, rgba(30,15,5,0.8) 100%);
+    border-bottom: 1px solid #c8a850;
+    display: flex;
+    align-items: center;
+    padding: 0 15px;
+    gap: 20px;
+    color: #e8d8a8;
+    font-size: 13px;
+}
+
+.hud-top .hud-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.hud-top .hud-item .label {
+    color: #999;
+}
+
+.hud-top .hud-item .value {
+    color: #ffe080;
+    font-weight: bold;
+}
+
+.hud-bottom {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 15px;
+    background: linear-gradient(0deg, rgba(30,15,5,0.95) 0%, rgba(30,15,5,0.8) 100%);
+    border-top: 1px solid #c8a850;
+}
+
+.hud-bottom .game-btn {
+    padding: 6px 14px;
+    font-size: 13px;
+}
+
+/* 城池信息面板 */
+.city-info-panel {
+    right: 10px;
+    top: 50px;
+    width: 260px;
+}
+
+.city-info-panel .city-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.city-info-panel .stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+}
+
+.city-info-panel .stat-label {
+    color: #999;
+}
+
+.city-info-panel .stat-value {
+    color: #ffe080;
+}
+
+.city-info-panel .generals-list {
+    margin-top: 8px;
+    border-top: 1px solid #554420;
+    padding-top: 8px;
+}
+
+.city-info-panel .general-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+    cursor: pointer;
+}
+
+.city-info-panel .general-row:hover {
+    background: rgba(200,168,80,0.1);
+}
+
+.city-info-panel .general-portrait {
+    width: 32px;
+    height: 32px;
+    border: 1px solid #c8a850;
+    border-radius: 2px;
+    image-rendering: pixelated;
+}
+
+.city-info-panel .city-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+/* 武将详情面板 */
+.general-detail-panel {
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 500px;
+    z-index: 100;
+}
+
+.general-detail-panel .portrait-section {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 10px;
+}
+
+.general-detail-panel .portrait-large {
+    width: 80px;
+    height: 80px;
+    border: 2px solid #c8a850;
+    border-radius: 4px;
+    image-rendering: pixelated;
+}
+
+.general-detail-panel .basic-info {
+    flex: 1;
+}
+
+.general-detail-panel .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    text-align: center;
+    margin: 10px 0;
+}
+
+.general-detail-panel .stat-block {
+    background: rgba(200,168,80,0.1);
+    border: 1px solid #554420;
+    border-radius: 3px;
+    padding: 6px;
+}
+
+.general-detail-panel .stat-block .stat-name {
+    font-size: 11px;
+    color: #999;
+}
+
+.general-detail-panel .stat-block .stat-val {
+    font-size: 18px;
+    font-weight: bold;
+    color: #ffe080;
+}
+
+/* 战斗UI */
+.battle-hud {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 120px;
+    background: linear-gradient(0deg, rgba(20,10,5,0.95) 0%, rgba(20,10,5,0.85) 100%);
+    border-top: 2px solid #c8a850;
+    display: flex;
+    padding: 10px 15px;
+    gap: 15px;
+}
+
+.battle-hud .general-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 200px;
+}
+
+.battle-hud .bars {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+}
+
+.battle-hud .bar {
+    height: 14px;
+    background: #1a0e04;
+    border: 1px solid #554420;
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+}
+
+.battle-hud .bar-fill {
+    height: 100%;
+    transition: width 0.3s;
+}
+
+.battle-hud .bar-hp .bar-fill { background: linear-gradient(180deg, #44cc44, #228822); }
+.battle-hud .bar-mp .bar-fill { background: linear-gradient(180deg, #4488ff, #2244cc); }
+
+.battle-hud .bar-text {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: #fff;
+    text-shadow: 1px 1px 1px #000;
+}
+
+.battle-hud .skills-bar {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.battle-hud .skill-btn {
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(180deg, #3a2a10 0%, #2a1a08 100%);
+    border: 1px solid #c8a850;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #ffe080;
+    font-size: 11px;
+    transition: all 0.15s;
+    position: relative;
+}
+
+.battle-hud .skill-btn:hover {
+    border-color: #ffe080;
+    background: linear-gradient(180deg, #5a4a20 0%, #3a2a10 100%);
+}
+
+.battle-hud .skill-btn.on-cooldown {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.battle-hud .skill-btn .cooldown-overlay {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: rgba(0,0,0,0.7);
+    color: #ff8080;
+    font-size: 10px;
+    text-align: center;
+}
+
+/* 对话面板 */
+.dialog-panel {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 600px;
+    max-width: 90%;
+}
+
+.dialog-panel .speaker {
+    color: #ffe080;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.dialog-panel .dialog-text {
+    line-height: 1.6;
+    min-height: 60px;
+}
+
+.dialog-panel .dialog-choices {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* 回合结算 */
+.turn-report {
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 450px;
+    max-height: 70vh;
+    overflow-y: auto;
+    z-index: 100;
+}
+
+.turn-report .report-item {
+    padding: 5px 0;
+    border-bottom: 1px solid #332210;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.turn-report .report-icon {
+    width: 20px;
+    text-align: center;
+}
+
+/* 外交面板 */
+.diplomacy-panel {
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 500px;
+    z-index: 100;
+}
+
+/* 武将列表 */
+.generals-panel {
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 650px;
+    max-height: 80vh;
+    z-index: 100;
+}
+
+.generals-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.generals-table th {
+    background: rgba(200,168,80,0.15);
+    padding: 6px 8px;
+    text-align: center;
+    font-size: 12px;
+    color: #c8a850;
+    border-bottom: 1px solid #554420;
+}
+
+.generals-table td {
+    padding: 5px 8px;
+    text-align: center;
+    font-size: 13px;
+    border-bottom: 1px solid #221108;
+}
+
+.generals-table tr:hover {
+    background: rgba(200,168,80,0.08);
+}
+
+/* 通知 */
+.notification {
+    position: absolute;
+    top: 50px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(30,15,5,0.95);
+    border: 1px solid #c8a850;
+    border-radius: 4px;
+    padding: 10px 20px;
+    color: #ffe080;
+    font-size: 14px;
+    z-index: 200;
+    animation: notifyFade 2s forwards;
+}
+
+@keyframes notifyFade {
+    0% { opacity: 0; transform: translate(-50%, -10px); }
+    15% { opacity: 1; transform: translate(-50%, 0); }
+    85% { opacity: 1; transform: translate(-50%, 0); }
+    100% { opacity: 0; transform: translate(-50%, -10px); }
+}
+
+/* 滚动条 */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #1a0e04; }
+::-webkit-scrollbar-thumb { background: #554420; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #c8a850; }
+
+/* 关闭按钮 */
+.close-btn {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    background: none;
+    border: 1px solid #664430;
+    border-radius: 3px;
+    color: #c8a850;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.close-btn:hover {
+    border-color: #ff6040;
+    color: #ff6040;
+}
+
+/* 装备槽 */
+.equip-slots {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.equip-slot {
+    background: rgba(0,0,0,0.3);
+    border: 1px dashed #554420;
+    border-radius: 3px;
+    padding: 6px;
+    text-align: center;
+    font-size: 11px;
+    color: #888;
+    cursor: pointer;
+}
+
+.equip-slot.filled {
+    border-style: solid;
+    border-color: #c8a850;
+    color: #ffe080;
+}
+
+/* Tooltip */
+.tooltip {
+    position: absolute;
+    background: rgba(20,10,5,0.95);
+    border: 1px solid #c8a850;
+    border-radius: 3px;
+    padding: 8px 10px;
+    color: #e8d8a8;
+    font-size: 12px;
+    max-width: 250px;
+    z-index: 300;
+    pointer-events: none;
+}
+
+.tooltip .tooltip-title {
+    color: #ffe080;
+    font-weight: bold;
+    margin-bottom: 4px;
+}
