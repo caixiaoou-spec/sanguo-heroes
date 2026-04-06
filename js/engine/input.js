@@ -113,6 +113,8 @@ export default class InputManager {
             const coords = this._getCanvasCoords(touch.clientX, touch.clientY);
             this.mouse.x = coords.x;
             this.mouse.y = coords.y;
+            this.mouse.clientX = touch.clientX;
+            this.mouse.clientY = touch.clientY;
             this.mouse.down = true;
             this.touchStart = { x: this.mouse.x, y: this.mouse.y };
             this.dragStart = { x: this.mouse.x, y: this.mouse.y };
