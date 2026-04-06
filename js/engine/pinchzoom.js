@@ -12,6 +12,7 @@ export default class PinchZoom {
         // 单指平移追踪：raw clientX/clientY
         this._panLastX = null;
         this._panLastY = null;
+        this._panTouchSeq = -1; // tracks which touchSeq we initialized from
     }
 
     // 每帧调用
@@ -47,9 +48,11 @@ export default class PinchZoom {
         }
         const cx = input.mouse.clientX;
         const cy = input.mouse.clientY;
-        if (cx === undefined || cx === 0) return;
+        if (!cx && !cy) return;
 
-        if (this._panLastX === null) {
+        // New finger down: always re-initialize from current position
+        if (this._panTouchSeq !== input.touchSeq) {
+            this._panTouchSeq = input.touchSeq;
             this._panLastX = cx;
             this._panLastY = cy;
             return;

@@ -15,6 +15,7 @@ export default class InputManager {
         this._twoFingerLastDist = 0;
         this.isPinching = false;
         this.pinchDelta = 0;
+        this.touchSeq = 0; // increments on each single-finger touchstart
 
         // 逻辑分辨率，不依赖canvas.width（因为canvas.width含DPR）
         this.logicalWidth = 1280;
@@ -116,6 +117,7 @@ export default class InputManager {
             this.mouse.clientX = touch.clientX;
             this.mouse.clientY = touch.clientY;
             this.mouse.down = true;
+            this.touchSeq++;
             this.touchStart = { x: this.mouse.x, y: this.mouse.y };
             this.dragStart = { x: this.mouse.x, y: this.mouse.y };
         }, { passive: false });
