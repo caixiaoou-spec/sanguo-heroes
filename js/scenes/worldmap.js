@@ -883,24 +883,59 @@ export default class WorldMapScene {
     }
 
     _handleGeneralList() {
-        // Handle scroll
+        const r = this.renderer;
+        const generals = this.gs.getGeneralsOf(this.gs.playerFaction);
+        const maxVisible = 16;
+        const maxScroll = Math.max(0, generals.length - maxVisible);
+        const px = r.width / 2 - 340;
+        const py = 40;
+        const pw = 680;
+        const visibleCount = Math.min(generals.length, maxVisible);
+        const ph = 50 + visibleCount * 30 + 20;
+
+        // Wheel scroll
         const scroll = this.input.consumeScroll();
         if (scroll) {
-            const generals = this.gs.getGeneralsOf(this.gs.playerFaction);
-            const maxScroll = Math.max(0, generals.length - 16);
             this._generalListScroll = Math.max(0, Math.min(maxScroll, this._generalListScroll + (scroll > 0 ? 1 : -1)));
         }
+
+        // Drag-as-scroll (touch)
+        const drag = this.input.getDrag();
+        if (drag) {
+            const deltaDy = drag.dy - this._dragLastDy;
+            this._dragLastDy = drag.dy;
+            this._dragScrollAccum += deltaDy;
+            const threshold = 30;
+            while (this._dragScrollAccum <= -threshold) {
+                this._generalListScroll = Math.min(maxScroll, this._generalListScroll + 1);
+                this._dragScrollAccum += threshold;
+            }
+            while (this._dragScrollAccum >= threshold) {
+                this._generalListScroll = Math.max(0, this._generalListScroll - 1);
+                this._dragScrollAccum -= threshold;
+            }
+        } else {
+            this._dragLastDy = 0;
+            this._dragScrollAccum = 0;
+        }
+        if (this.input.isDragging) return;
 
         const click = this.input.getClick();
         if (!click) return;
 
-        const r = this.renderer;
-        const px = r.width / 2 - 340;
-        const py = 40;
-        const pw = 680;
-        const generals = this.gs.getGeneralsOf(this.gs.playerFaction);
-        const visibleCount = Math.min(generals.length, 16);
-        const ph = 50 + visibleCount * 30 + 20;
+        // ▲ arrow in title bar
+        if (this._generalListScroll > 0 &&
+            click.x >= px + pw - 70 && click.x <= px + pw - 5 && click.y >= py + 5 && click.y <= py + 27) {
+            this._generalListScroll = Math.max(0, this._generalListScroll - 1);
+            return;
+        }
+        // ▼ arrow below last row
+        if (this._generalListScroll < maxScroll &&
+            click.x >= px + pw - 70 && click.x <= px + pw - 5 &&
+            click.y >= py + 56 + visibleCount * 30 && click.y <= py + 80 + visibleCount * 30) {
+            this._generalListScroll = Math.min(maxScroll, this._generalListScroll + 1);
+            return;
+        }
 
         // Close button or click outside panel
         const insidePanel = Renderer.pointInRect(click.x, click.y, px, py, pw, ph);
@@ -911,8 +946,7 @@ export default class WorldMapScene {
             return;
         }
 
-        // Click on general row (with scroll offset)
-        const maxVisible = 16;
+        // Click on general row
         const startIdx = this._generalListScroll;
         for (let vi = 0; vi < maxVisible && startIdx + vi < generals.length; vi++) {
             const gy = py + 60 + vi * 30;
@@ -934,7 +968,7 @@ export default class WorldMapScene {
         // Must match the dynamic ph/py calculation in _drawGeneralDetailPanel
         const skills = gen ? gen.skills.map(sid => this.gs.getSkill(sid)).filter(Boolean) : [];
         const skillRows = Math.max(1, Math.ceil(skills.length / 4));
-        const ph = 30 + 110 + 12 + 58 + 14 + 26 + 14 + 22 + skillRows * 48 + 16 + 50 + 16;
+        const ph = 30 + 110 + 12 + 58 + 14 + 26 + 14 + 22 + skillRows * 48 + 24;
         const py = Math.max(10, r.height / 2 - ph / 2);
 
         // Close button (×) or click outside panel
