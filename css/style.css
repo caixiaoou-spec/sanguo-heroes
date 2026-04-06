@@ -10,17 +10,54 @@ body {
     font-family: 'SimHei', 'Microsoft YaHei', 'PingFang SC', sans-serif;
     user-select: none;
     -webkit-user-select: none;
+    /* Use dynamic viewport height to account for browser chrome on mobile */
+    height: 100dvh;
 }
 
 #game-container {
     position: fixed;
     inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
 }
 
 #game-canvas {
     display: block;
-    width: 100%;
-    height: 100%;
+    /* Display size is set dynamically by renderer.js to maintain 1280:800 aspect ratio */
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Portrait orientation warning */
+#rotate-prompt {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: #000;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+}
+#rotate-prompt .rotate-icon {
+    font-size: 72px;
+    color: #c8a850;
+    animation: rotatePulse 1.5s ease-in-out infinite;
+}
+#rotate-prompt .rotate-text {
+    font-size: 22px;
+    color: #ffe080;
+    letter-spacing: 4px;
+}
+@keyframes rotatePulse {
+    0%, 100% { transform: rotate(0deg); opacity: 1; }
+    50% { transform: rotate(90deg); opacity: 0.6; }
+}
+@media (orientation: portrait) {
+    #rotate-prompt { display: flex; }
 }
 
 #ui-layer {

@@ -10,9 +10,20 @@ export default class Renderer {
         this.dpr = window.devicePixelRatio || 1;
         canvas.width = this.width * this.dpr;
         canvas.height = this.height * this.dpr;
-        canvas.style.width = '100%';
-        canvas.style.height = '100%';
         this.ctx.scale(this.dpr, this.dpr);
+
+        // Letterbox fit: maintain 1280×800 aspect ratio, centered in viewport
+        const fitCanvas = () => {
+            const scale = Math.min(
+                window.innerWidth  / this.width,
+                window.innerHeight / this.height
+            );
+            canvas.style.width  = Math.round(this.width  * scale) + 'px';
+            canvas.style.height = Math.round(this.height * scale) + 'px';
+        };
+        fitCanvas();
+        window.addEventListener('resize', fitCanvas);
+        window.addEventListener('orientationchange', () => setTimeout(fitCanvas, 100));
 
         // Camera for world map
         this.camera = { x: 0, y: 0, zoom: 1 };
