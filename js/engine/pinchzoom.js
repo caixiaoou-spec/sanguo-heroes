@@ -9,10 +9,12 @@ export default class PinchZoom {
         // 平移偏移（CSS 像素）
         this._tx = 0;
         this._ty = 0;
-        // 单指平移追踪：raw clientX/clientY
-        this._panLastX = null;
-        this._panLastY = null;
-        this._panTouchSeq = -1; // tracks which touchSeq we initialized from
+        // 单指平移：记录起点，用绝对偏移计算（不累加delta，彻底避免跳跃）
+        this._panTouchSeq = -1;
+        this._panStartClientX = 0;
+        this._panStartClientY = 0;
+        this._panStartTx = 0;
+        this._panStartTy = 0;
     }
 
     // 每帧调用
@@ -21,8 +23,7 @@ export default class PinchZoom {
         if (this.zoom > 1) {
             this._updatePan(input);
         } else {
-            this._panLastX = null;
-            this._panLastY = null;
+            this._panTouchSeq = -1;
         }
     }
 
@@ -42,34 +43,41 @@ export default class PinchZoom {
     _updatePan(input) {
         // 放大状态下，单指移动平移 CSS 视口
         if (!input.mouse.down || input.isPinching) {
-            this._panLastX = null;
-            this._panLastY = null;
+            // 手指抬起时强制重置，确保下次触碰重新初始化
+            this._panTouchSeq = -1;
             return;
         }
         const cx = input.mouse.clientX;
         const cy = input.mouse.clientY;
-        if (!cx && !cy) return;
 
-        // New finger down: always re-initialize from current position
+        // 新触碰（或重置后第一次）：记录起始状态
         if (this._panTouchSeq !== input.touchSeq) {
             this._panTouchSeq = input.touchSeq;
-            this._panLastX = cx;
-            this._panLastY = cy;
+            this._panStartClientX = cx;
+            this._panStartClientY = cy;
+            this._panStartTx = this._tx;
+            this._panStartTy = this._ty;
             return;
         }
 
-        const dx = cx - this._panLastX;
-        const dy = cy - this._panLastY;
-        this._panLastX = cx;
-        this._panLastY = cy;
+        // 绝对偏移：_tx = 触碰时的_tx + 手指移动距离，不累加误差
+        const newTx = this._panStartTx + (cx - this._panStartClientX);
+        const newTy = this._panStartTy + (cy - this._panStartClientY);
 
-        if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return;
+        const maxTx = (window.innerWidth  * (this.zoom - 1)) / 2;
+        const maxTy = (window.innerHeight * (this.zoom - 1)) / 2;
+        const clampedTx = Math.max(-maxTx, Math.min(maxTx, newTx));
+        const clampedTy = Math.max(-maxTy, Math.min(maxTy, newTy));
 
-        this._tx += dx;
-        this._ty += dy;
-        this._clampTranslation();
+        if (Math.abs(clampedTx - this._tx) < 0.5 && Math.abs(clampedTy - this._ty) < 0.5) return;
+
+        // 到达边界时同步起点，防止反向移动时跳跃
+        if (clampedTx !== newTx) this._panStartClientX += (newTx - clampedTx);
+        if (clampedTy !== newTy) this._panStartClientY += (newTy - clampedTy);
+
+        this._tx = clampedTx;
+        this._ty = clampedTy;
         this._applyTransform();
-        // 标记为拖拽，使游戏不注册 click
         input.isDragging = true;
     }
 
