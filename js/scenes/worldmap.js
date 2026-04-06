@@ -2,6 +2,7 @@
 import EconomySystem from '../systems/economy.js';
 import DiplomacySystem from '../systems/diplomacy.js';
 import Renderer from '../engine/renderer.js';
+import GameState from '../engine/game.js';
 import { MAX_GARRISON } from '../utils/constants.js';
 import { WorldMapLogic } from './worldmap_logic.js';
 import { WorldMapRenderer } from './worldmap_renderer.js';
@@ -75,6 +76,9 @@ export default class WorldMapScene {
             { text: '结束回合', action: 'end_turn', x: 0, w: 100 },
         ];
 
+        // Victory screen state (null when not active)
+        this._victoryScreen = null;
+
         // Real-time turn progress tracker (seconds elapsed since turn started, used for march animation)
         this._turnElapsed = 0;
         this._turnDuration = 3.0; // visual seconds per turn (how long flags animate across the map)
@@ -106,6 +110,48 @@ export default class WorldMapScene {
     }
 
     update(dt) {
+        // Victory screen takes over all input when active
+        if (this._victoryScreen) {
+            this._victoryScreen.elapsed += dt;
+            const vs = this._victoryScreen;
+            // After phase 1 intro, accept any click/key to skip to menu
+            if (vs.elapsed > 3.0) {
+                const click = this.input.getClick();
+                if (click) {
+                    this.game.audio.stopBGM();
+                    this.game.gameState = new GameState();
+                    this.game.switchScene('menu');
+                    return;
+                }
+            }
+            // Spawn celebration particles
+            vs.particles = vs.particles || [];
+            if (vs.elapsed < 15) {
+                for (let i = 0; i < 3; i++) {
+                    const side = Math.random() < 0.5 ? -1 : 1;
+                    vs.particles.push({
+                        x: Math.random() * this.renderer.width,
+                        y: this.renderer.height + 10,
+                        vx: side * (30 + Math.random() * 60),
+                        vy: -(180 + Math.random() * 220),
+                        life: 3.0 + Math.random() * 2,
+                        maxLife: 5.0,
+                        color: ['#ffd700','#ff6644','#ff4488','#44aaff','#88ff44'][Math.floor(Math.random()*5)],
+                        size: 4 + Math.random() * 5,
+                    });
+                }
+            }
+            for (let i = vs.particles.length - 1; i >= 0; i--) {
+                const p = vs.particles[i];
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+                p.vy += 120 * dt; // gravity
+                p.life -= dt;
+                if (p.life <= 0) vs.particles.splice(i, 1);
+            }
+            return;
+        }
+
         this.cloudOffset += dt * 5;
         this.flagWave += dt * 4;
         this.riverPhase += dt * 1.5;
@@ -871,6 +917,12 @@ export default class WorldMapScene {
         if (click) {
             this.showTurnReport = false;
             this._turnReportScroll = 0;
+            if (this._pendingVictory) {
+                this._pendingVictory = false;
+                this._victoryScreen = { elapsed: 0, particles: [] };
+                this.game.audio.playVictoryFanfare();
+                return;
+            }
             // 回合结算安全网可能在回合报告显示后入队战斗（极少情况）
             // 关闭回合报告后立即处理
             if (this.gs.battleQueue.length > 0) {
@@ -1036,6 +1088,8 @@ export default class WorldMapScene {
         const victory = this.gs.checkVictory();
         if (victory === 'victory') {
             reports.push({ text: '天下统一！你赢得了胜利！', type: 'victory' });
+            // Trigger victory screen after turn report is dismissed
+            this._pendingVictory = true;
         } else if (victory === 'defeat') {
             reports.push({ text: '势力灭亡，游戏结束...', type: 'defeat' });
         }
@@ -1313,6 +1367,9 @@ export default class WorldMapScene {
 
         // March tooltip
         if (this.hoveredMarch) this._drawMarchTooltip(r, ctx);
+
+        // Victory screen — full-screen overlay, drawn last
+        if (this._victoryScreen) this._drawVictoryScreen(r, ctx);
     }
 
     _drawMapBackground(r, ctx) { return this._renderer_wm._drawMapBackground(r, ctx); }
@@ -1352,6 +1409,8 @@ export default class WorldMapScene {
     _drawInterceptionAlertPanel(r, ctx) { return this._renderer_wm._drawInterceptionAlertPanel(r, ctx); }
 
     _drawTurnReportPanel(r, ctx) { return this._renderer_wm._drawTurnReportPanel(r, ctx); }
+
+    _drawVictoryScreen(r, ctx) { return this._renderer_wm._drawVictoryScreen(r, ctx); }
 
     _unitTypeName(type) {
         const names = { infantry: '步兵', cavalry: '骑兵', archer: '弓兵', spear: '枪兵' };

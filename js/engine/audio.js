@@ -536,6 +536,103 @@ export default class AudioManager {
         noise.stop(time + 0.1);
     }
 
+    // 天下统一胜利主题曲 — 宏大五声音阶进行，三段式
+    playVictoryFanfare() {
+        this.stopBGM();
+        if (!this.audioCtx || this.muted) return;
+        this.resume();
+
+        const ctx = this.audioCtx;
+        const bus = ctx.createGain();
+        bus.gain.value = this.bgmVolume * 1.2;
+        bus.connect(ctx.destination);
+        this._activeBgmBus = bus;
+        this.currentBGM = 'victory_fanfare';
+
+        // D大调五声音阶
+        const D3=146.83, Fs3=185, A3=220, B3=246.94;
+        const D4=293.66, E4=329.63, Fs4=369.99, A4=440, B4=493.88;
+        const D5=587.33, E5=659.25, Fs5=739.99, A5=880, B5=987.77;
+        const D6=1174.66;
+
+        // ─── 第一段：号角引子 (0~4s) 庄严宣告 ───
+        const fanfare = [
+            { f: D4, t: 0.0,  d: 0.3 },
+            { f: A4, t: 0.4,  d: 0.3 },
+            { f: D5, t: 0.8,  d: 0.6 },
+            { f: E5, t: 1.5,  d: 0.3 },
+            { f: Fs5,t: 1.9,  d: 0.3 },
+            { f: A5, t: 2.3,  d: 0.8 },
+            { f: Fs5,t: 3.2,  d: 0.2 },
+            { f: E5, t: 3.5,  d: 0.2 },
+            { f: D5, t: 3.8,  d: 1.2 },
+        ];
+
+        // ─── 第二段：主旋律 (5~13s) 磅礴展开 ───
+        const theme = [
+            D4, Fs4, A4, D5,  E5, D5, A4, Fs4,
+            D4, E4,  Fs4, A4, B4, A4, Fs4, E4,
+            D4, Fs4, A4, B4,  D5, E5, Fs5, A5,
+            Fs5, E5, D5, B4,  A4, Fs4, D4, 0,
+        ];
+
+        // ─── 第三段：尾声重奏 (13~20s) 余音绕梁 ───
+        const coda = [
+            A4, D5, Fs5, A5,  B5, A5, Fs5, D5,
+            A4, B4, D5,  Fs5, A5, Fs5, E5, D5,
+            B4, D5, Fs5, B5,  D6, B5, A5, Fs5,
+            D5, 0,  0,   0,   D5, 0,  0,  0,
+        ];
+
+        const now = ctx.currentTime;
+
+        // 号角引子 — 明亮鼓号感
+        fanfare.forEach(({ f, t, d }) => {
+            this._playTone(bus, 'square',    f,      now + t, d, 0.05, 'sharp');
+            this._playTone(bus, 'triangle',  f * 2,  now + t, d * 0.6, 0.015, 'pluck');
+        });
+        // 引子底鼓
+        [0.0, 0.4, 0.8, 1.5, 2.3, 3.8].forEach(t => this._playDrum(bus, now + t, 'heavy'));
+
+        // 主旋律 — 古筝+笛箫叠层
+        const noteLen2 = 0.42;
+        const themeStart = 5.0;
+        theme.forEach((f, i) => {
+            if (f === 0) return;
+            const t = now + themeStart + i * noteLen2;
+            this._playTone(bus, 'triangle', f,     t, noteLen2 * 0.88, 0.055, 'pluck');
+            this._playTone(bus, 'sine',     f,     t + 0.04, noteLen2 * 0.7, 0.02, 'pad');
+            this._playTone(bus, 'sine',     f * 2, t + 0.06, noteLen2 * 0.4, 0.008, 'pluck');
+        });
+        // 主旋律低音 & 鼓
+        [D3, Fs3, A3, D3, D3, A3, D3, D3].forEach((f, i) => {
+            const t = now + themeStart + i * noteLen2 * 4;
+            this._playTone(bus, 'sine', f, t, noteLen2 * 3.5, 0.045, 'bass');
+            this._playDrum(bus, t, 'heavy');
+            this._playDrum(bus, t + noteLen2 * 2, 'accent');
+        });
+
+        // 尾声重奏 — 更饱满
+        const codaStart = 13.5;
+        coda.forEach((f, i) => {
+            if (f === 0) return;
+            const t = now + codaStart + i * noteLen2;
+            this._playTone(bus, 'triangle', f,      t, noteLen2 * 0.9,  0.06,  'pluck');
+            this._playTone(bus, 'sine',     f,      t + 0.03, noteLen2 * 0.8, 0.025, 'pad');
+            this._playTone(bus, 'sine',     f / 2,  t, noteLen2 * 1.0,  0.03,  'bass');
+        });
+        // 尾声鼓 + 镲
+        for (let i = 0; i < 16; i++) {
+            const t = now + codaStart + i * noteLen2 * 2;
+            this._playDrum(bus, t, i % 4 === 0 ? 'heavy' : 'accent');
+            if (i % 2 === 0) this._playCymbal(bus, t);
+        }
+
+        // 21s 后淡出
+        bus.gain.setValueAtTime(bus.gain.value, now + 20);
+        bus.gain.linearRampToValueAtTime(0, now + 22);
+    }
+
     stopBGM() {
         // 1. 清除定时器
         if (this._bgmInterval) {

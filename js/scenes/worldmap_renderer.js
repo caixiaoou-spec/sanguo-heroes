@@ -1574,4 +1574,131 @@ export class WorldMapRenderer {
             });
         }
     }
+
+    _drawVictoryScreen(r, ctx) {
+        const vs = this._s._victoryScreen;
+        const elapsed = vs.elapsed;
+        const W = r.width;
+        const H = r.height;
+        const cx = W / 2;
+        const cy = H / 2;
+
+        // ─── Phase 1 (0~3s): 黑幕淡入 ───
+        const overlayAlpha = Math.min(1, elapsed / 1.5);
+        ctx.globalAlpha = overlayAlpha;
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, W, H);
+        ctx.globalAlpha = 1;
+
+        if (overlayAlpha < 0.3) return;
+
+        // ─── 粒子礼花 ───
+        for (const p of (vs.particles || [])) {
+            const lifeRatio = p.life / p.maxLife;
+            ctx.globalAlpha = Math.min(1, lifeRatio * 3) * overlayAlpha;
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size * lifeRatio, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+
+        // ─── 背景金光晕 ───
+        if (elapsed > 0.5) {
+            const glowAlpha = Math.min(0.35, (elapsed - 0.5) / 3) * overlayAlpha;
+            const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, H * 0.8);
+            grd.addColorStop(0, `rgba(200,168,50,${glowAlpha})`);
+            grd.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = grd;
+            ctx.fillRect(0, 0, W, H);
+        }
+
+        // ─── 主标题「天下归一」逐字出现 ───
+        const titleChars = ['天', '下', '归', '一'];
+        const titleStart = 0.8;
+        const charDelay = 0.35;
+        const titleY = cy - 60;
+        titleChars.forEach((ch, i) => {
+            const charTime = elapsed - titleStart - i * charDelay;
+            if (charTime <= 0) return;
+            const charAlpha = Math.min(1, charTime / 0.3);
+            const offsetY = Math.max(0, (1 - charTime / 0.4)) * 30;
+            ctx.globalAlpha = charAlpha * overlayAlpha;
+            // 金色光晕
+            ctx.shadowColor = '#ffd700';
+            ctx.shadowBlur = 20 + Math.sin(elapsed * 3 + i) * 8;
+            const charX = cx - 90 + i * 60;
+            ctx.font = 'bold 64px serif';
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#ffe44c';
+            ctx.fillText(ch, charX, titleY + offsetY);
+            ctx.shadowBlur = 0;
+        });
+        ctx.globalAlpha = 1;
+
+        // ─── Phase 2 (3~8s): 势力名 + 统计卡片 ───
+        const statsAlpha = Math.min(1, Math.max(0, (elapsed - 2.8) / 0.8));
+        if (statsAlpha > 0) {
+            const gs = this._s.gs;
+            const faction = gs.getPlayerFaction();
+
+            // 势力名
+            ctx.globalAlpha = statsAlpha * overlayAlpha;
+            ctx.shadowColor = faction ? faction.color : '#ffd700';
+            ctx.shadowBlur = 15;
+            ctx.font = 'bold 28px serif';
+            ctx.textAlign = 'center';
+            ctx.fillStyle = faction ? faction.color : '#ffd700';
+            ctx.fillText(`${faction ? faction.name : ''}  一统天下`, cx, titleY + 52);
+            ctx.shadowBlur = 0;
+
+            // 统计卡片
+            const stats = [
+                { label: '统治城池', value: gs.getCitiesOf(gs.playerFaction).length },
+                { label: '历经回合', value: gs.turn },
+                { label: '麾下武将', value: gs.getGeneralsOf(gs.playerFaction).length },
+                { label: '灭亡势力', value: gs.factions.filter(f => !f.alive && f.id !== gs.playerFaction).length },
+            ];
+            const cardW = 160, cardH = 80, gap = 20;
+            const totalW = stats.length * cardW + (stats.length - 1) * gap;
+            const startX = cx - totalW / 2;
+            const cardY = cy + 20;
+
+            stats.forEach((stat, i) => {
+                const cardX = startX + i * (cardW + gap);
+                const cardAlpha = Math.min(1, Math.max(0, (elapsed - 3.2 - i * 0.15) / 0.4));
+                ctx.globalAlpha = cardAlpha * overlayAlpha;
+                ctx.fillStyle = 'rgba(20,10,0,0.85)';
+                ctx.strokeStyle = '#c8a850';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.roundRect(cardX, cardY, cardW, cardH, 6);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#c8a850';
+                ctx.font = '13px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(stat.label, cardX + cardW / 2, cardY + 24);
+
+                ctx.fillStyle = '#ffe080';
+                ctx.font = 'bold 32px sans-serif';
+                ctx.fillText(stat.value, cardX + cardW / 2, cardY + 62);
+            });
+
+            // ─── Phase 3 (8s+): 提示文字闪烁 ───
+            const hintAlpha = Math.min(1, Math.max(0, (elapsed - 7.5) / 1.0));
+            if (hintAlpha > 0) {
+                const blink = 0.6 + 0.4 * Math.sin(elapsed * 3);
+                ctx.globalAlpha = hintAlpha * blink * overlayAlpha;
+                ctx.fillStyle = '#aaa';
+                ctx.font = '18px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('点击任意位置返回主菜单', cx, cy + 160);
+            }
+        }
+
+        ctx.globalAlpha = 1;
+        ctx.textAlign = 'left';
+    }
 }
