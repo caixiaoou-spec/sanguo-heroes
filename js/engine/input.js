@@ -122,7 +122,7 @@ export default class InputManager {
             if (this.touchStart) {
                 const dx = this.mouse.x - this.touchStart.x;
                 const dy = this.mouse.y - this.touchStart.y;
-                if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+                if (Math.abs(dx) > 12 || Math.abs(dy) > 12) {
                     this.isDragging = true;
                 }
             }

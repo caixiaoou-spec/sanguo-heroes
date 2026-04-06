@@ -450,6 +450,28 @@ export default class WorldMapScene {
             const genSectionY = actionsY + btnGap * 3 + btnH + 12;
             const genListY = genSectionY + 26;
             const generals = this.gs.getGeneralsInCity(city.id);
+            const maxScroll4 = Math.max(0, generals.length - 4);
+
+            // ▲/▼ scroll arrows — checked FIRST to avoid conflict with general row zones
+            // drawText baseline='top': ▲ drawn at genListY-6 → glyph [genListY-6, genListY+10]
+            //                          ▼ drawn at infoY-2    → glyph [infoY-2,    infoY+14]
+            if (generals.length > 4) {
+                const infoY = genListY + 4 * 40 + 4;  // same formula as renderer (maxVisible always 4 when >4)
+                // Wide hit zones: full panel width right half, ±20px around glyph
+                if (click.x >= panelX + 180) {
+                    // ▲ arrow (only shown when startIdx > 0)
+                    if (this._cityGenScroll > 0 && click.y >= genListY - 20 && click.y <= genListY + 12) {
+                        this._cityGenScroll = Math.max(0, this._cityGenScroll - 1);
+                        return true;
+                    }
+                    // ▼ arrow (only shown when more rows below)
+                    if (this._cityGenScroll < maxScroll4 && click.y >= infoY - 8 && click.y <= infoY + 20) {
+                        this._cityGenScroll = Math.min(maxScroll4, this._cityGenScroll + 1);
+                        return true;
+                    }
+                }
+            }
+
             const maxVisible = Math.min(generals.length, 4);
             const startIdx = this._cityGenScroll;
             for (let i = 0; i < maxVisible && startIdx + i < generals.length; i++) {
@@ -460,29 +482,14 @@ export default class WorldMapScene {
                 }
             }
 
-            // ▲/▼ scroll arrows for generals list (x = panelX + 270 - 20 = panelX + 250)
-            if (generals.length > maxVisible) {
-                const infoY = genListY + maxVisible * 40 + 4;
-                if (click.x >= panelX + 230 && click.x <= panelX + 270) {
-                    if (click.y >= genListY - 18 && click.y <= genListY + 2) {
-                        this._cityGenScroll = Math.max(0, this._cityGenScroll - 1);
-                        return true;
-                    }
-                    if (click.y >= infoY - 10 && click.y <= infoY + 10) {
-                        this._cityGenScroll = Math.min(Math.max(0, generals.length - maxVisible), this._cityGenScroll + 1);
-                        return true;
-                    }
-                }
-            }
-
             // Captive recruit/execute buttons — must match _drawCityPanel captive layout
             const captives = this.gs.getCapturedInCity(city.id);
             if (captives.length > 0) {
                 const pw = 270;
                 // Recompute capSectionY same way as renderer
                 const visibleGens = Math.min(generals.length, 4);
-                const genListY = genSectionY + 26;
-                const genListEnd = genListY + Math.max(visibleGens, 1) * 40 + (generals.length === 0 ? 20 : 0) + 12;
+                const scrollRowH = generals.length > 4 ? 24 : 0;
+                const genListEnd = genListY + Math.max(visibleGens, 1) * 40 + (generals.length === 0 ? 20 : 0) + scrollRowH + 12;
                 const capSectionY = genListEnd;
                 for (let i = 0; i < captives.length; i++) {
                     const cap = captives[i];
