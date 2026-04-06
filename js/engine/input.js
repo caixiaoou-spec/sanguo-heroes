@@ -181,11 +181,25 @@ export default class InputManager {
                 this._twoFingerActive = false;
                 this.isPinching = false;
                 this.pinchDelta = 0;
-                // Clear single-finger state so the next single-finger drag starts fresh
-                this.mouse.down = false;
-                this.isDragging = false;
-                this.touchStart = null;
-                this.dragStart = null;
+                if (e.touches.length === 1) {
+                    // 还剩一根手指在屏幕上，直接接管为单指状态，无需抬手重按
+                    const touch = e.touches[0];
+                    const coords = this._getCanvasCoords(touch.clientX, touch.clientY);
+                    this.mouse.x = coords.x;
+                    this.mouse.y = coords.y;
+                    this.mouse.clientX = touch.clientX;
+                    this.mouse.clientY = touch.clientY;
+                    this.mouse.down = true;
+                    this.touchSeq++;
+                    this.touchStart = { x: this.mouse.x, y: this.mouse.y };
+                    this.dragStart = { x: this.mouse.x, y: this.mouse.y };
+                    this.isDragging = false;
+                } else {
+                    this.mouse.down = false;
+                    this.isDragging = false;
+                    this.touchStart = null;
+                    this.dragStart = null;
+                }
                 return;
             }
             if (!this.isDragging && this.touchStart) {

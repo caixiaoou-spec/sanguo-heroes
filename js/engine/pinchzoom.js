@@ -62,8 +62,9 @@ export default class PinchZoom {
 
         // 绝对偏移：_tx = 触碰时的_tx + 手指移动距离，不累加误差
         // 竖屏时容器旋转 -90°：container X = portrait -Y，container Y = portrait X
+        const isPortrait = window.innerHeight > window.innerWidth;
         let newTx, newTy;
-        if (window.innerHeight > window.innerWidth) {
+        if (isPortrait) {
             newTx = this._panStartTx - (cy - this._panStartClientY);
             newTy = this._panStartTy + (cx - this._panStartClientX);
         } else {
@@ -71,16 +72,25 @@ export default class PinchZoom {
             newTy = this._panStartTy + (cy - this._panStartClientY);
         }
 
-        const maxTx = (window.innerWidth  * (this.zoom - 1)) / 2;
-        const maxTy = (window.innerHeight * (this.zoom - 1)) / 2;
+        // 使用横屏尺寸计算边界（与 _clampTranslation 一致，避免竖屏时轴混乱）
+        const lw = Math.max(window.innerWidth, window.innerHeight);
+        const lh = Math.min(window.innerWidth, window.innerHeight);
+        const maxTx = lw * (this.zoom - 1) / 2;
+        const maxTy = lh * (this.zoom - 1) / 2;
         const clampedTx = Math.max(-maxTx, Math.min(maxTx, newTx));
         const clampedTy = Math.max(-maxTy, Math.min(maxTy, newTy));
 
         if (Math.abs(clampedTx - this._tx) < 0.5 && Math.abs(clampedTy - this._ty) < 0.5) return;
 
         // 到达边界时同步起点，防止反向移动时跳跃
-        if (clampedTx !== newTx) this._panStartClientX += (newTx - clampedTx);
-        if (clampedTy !== newTy) this._panStartClientY += (newTy - clampedTy);
+        // 竖屏：newTx 由 cy 推导 → 修正 _panStartClientY；newTy 由 cx 推导 → 修正 _panStartClientX
+        if (isPortrait) {
+            if (clampedTx !== newTx) this._panStartClientY -= (newTx - clampedTx);
+            if (clampedTy !== newTy) this._panStartClientX += (newTy - clampedTy);
+        } else {
+            if (clampedTx !== newTx) this._panStartClientX += (newTx - clampedTx);
+            if (clampedTy !== newTy) this._panStartClientY += (newTy - clampedTy);
+        }
 
         this._tx = clampedTx;
         this._ty = clampedTy;
