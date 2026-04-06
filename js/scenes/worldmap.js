@@ -666,19 +666,19 @@ export default class WorldMapScene {
             }
         }
 
-        // ▲/▼ scroll arrows — drawn at cx + cw/2 (x=440), cy+104 and cy+110+visibleCount*36
+        // ▲ arrow — right of "选择武将" label, at cx+cw-20, cy+92
         const maxVisible = 8;
         const visibleCountNow = Math.min(this.availableAttackers.length, maxVisible);
-        const arrowX = cx + cw / 2;
         if (this._attackScroll > 0 &&
-            click.x >= arrowX - 20 && click.x <= arrowX + 20 &&
-            click.y >= cy + 94 && click.y <= cy + 116) {
+            click.x >= cx + cw - 40 && click.x <= cx + cw &&
+            click.y >= cy + 84 && click.y <= cy + 108) {
             this._attackScroll = Math.max(0, this._attackScroll - 1);
             return;
         }
+        // ▼ arrow — at cx+cw-20, cy+112+N*36
         if (this._attackScroll + visibleCountNow < this.availableAttackers.length &&
-            click.x >= arrowX - 20 && click.x <= arrowX + 20 &&
-            click.y >= cy + 100 + visibleCountNow * 36 && click.y <= cy + 122 + visibleCountNow * 36) {
+            click.x >= cx + cw - 40 && click.x <= cx + cw &&
+            click.y >= cy + 104 + visibleCountNow * 36 && click.y <= cy + 128 + visibleCountNow * 36) {
             const maxScroll = Math.max(0, this.availableAttackers.length - 8);
             this._attackScroll = Math.min(maxScroll, this._attackScroll + 1);
             return;
@@ -701,8 +701,8 @@ export default class WorldMapScene {
             }
         }
 
-        // Confirm button
-        const confirmY = cy + 120 + visibleCountNow * 36;
+        // Confirm button — moved down 8px from previous layout
+        const confirmY = cy + 128 + visibleCountNow * 36;
         if (click.x >= cx + 130 && click.x <= cx + 270 && click.y >= confirmY && click.y <= confirmY + 36) {
             if (this.selectedAttackers.length > 0 && this.attackTarget) {
                 // Create march instead of instant battle
@@ -812,19 +812,18 @@ export default class WorldMapScene {
             }
         }
 
-        // ▲/▼ scroll arrows — same positions as attack panel
+        // ▲ arrow — right of "选择武将" label, at cx+cw-20, cy+92
         const maxVisible = 8;
         const visibleCountNow = Math.min(this.availableTransfers.length, maxVisible);
-        const arrowX = cx + cw / 2;
         if (this._transferScroll > 0 &&
-            click.x >= arrowX - 20 && click.x <= arrowX + 20 &&
-            click.y >= cy + 94 && click.y <= cy + 116) {
+            click.x >= cx + cw - 40 && click.x <= cx + cw &&
+            click.y >= cy + 84 && click.y <= cy + 108) {
             this._transferScroll = Math.max(0, this._transferScroll - 1);
             return;
         }
         if (this._transferScroll + visibleCountNow < this.availableTransfers.length &&
-            click.x >= arrowX - 20 && click.x <= arrowX + 20 &&
-            click.y >= cy + 100 + visibleCountNow * 36 && click.y <= cy + 122 + visibleCountNow * 36) {
+            click.x >= cx + cw - 40 && click.x <= cx + cw &&
+            click.y >= cy + 104 + visibleCountNow * 36 && click.y <= cy + 128 + visibleCountNow * 36) {
             const maxScroll = Math.max(0, this.availableTransfers.length - 8);
             this._transferScroll = Math.min(maxScroll, this._transferScroll + 1);
             return;
@@ -847,8 +846,8 @@ export default class WorldMapScene {
             }
         }
 
-        // Confirm button
-        const confirmY = cy + 120 + visibleCountNow * 36;
+        // Confirm button — moved down 8px from previous layout
+        const confirmY = cy + 128 + visibleCountNow * 36;
         if (click.x >= cx + 130 && click.x <= cx + 270 && click.y >= confirmY && click.y <= confirmY + 36) {
             if (this.selectedTransfers.length > 0 && this.transferTarget) {
                 // Create march instead of instant transfer

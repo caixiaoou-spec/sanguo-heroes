@@ -560,7 +560,7 @@ export class WorldMapRenderer {
         const genBlockH = visibleGens > 0 ? 26 + visibleGens * 40 + (allCityGens.length > visibleGens ? 20 : 0) : 36;
         const captiveBlockH = isOwned ? (captives.length > 0 ? 26 + captives.length * 36 + 10 : 44) : 0;
         const baseH = isOwned ? (160 + 28 + 3 * 30 + 24 + 12 + genBlockH + captiveBlockH + 16) : 220;
-        const ph = Math.max(545, baseH);
+        const ph = Math.min(Math.max(545, baseH), r.height - py - 8);
 
         // Panel background with slight gradient
         r.roundRect(px, py, pw, ph, 6, 'rgba(25,12,4,0.96)', '#c8a850');
@@ -742,7 +742,8 @@ export class WorldMapRenderer {
         const visibleCount = Math.min(this._s.availableAttackers.length, maxVisible);
         const startIdx = this._s._attackScroll;
 
-        r.roundRect(cx, cy, cw, 100 + visibleCount * 36 + 50, 4, 'rgba(30,15,5,0.95)', '#c8a850');
+        // Panel height: title(30) + targets(55) + label(22) + generals(N*36) + scroll(16) + confirm(34) + pad(20)
+        r.roundRect(cx, cy, cw, 177 + visibleCount * 36, 4, 'rgba(30,15,5,0.95)', '#c8a850');
 
         // Title
         r.fillRect(cx, cy, cw, 30, 'rgba(90,58,16,0.8)');
@@ -770,7 +771,11 @@ export class WorldMapRenderer {
 
         // General selection (with scroll)
         const scrollable = this._s.availableAttackers.length > maxVisible;
-        r.drawText(`选择武将（最多5人）${scrollable ? ' [滚轮翻页]' : ''}：`, cx + 10, cy + 92, { color: '#999', size: 15 });
+        r.drawText(`选择武将（最多5人）${scrollable ? ' [滑动/滚轮]' : ''}：`, cx + 10, cy + 92, { color: '#999', size: 15 });
+        // ▲ scroll indicator — drawn to the right of the label, same row
+        if (startIdx > 0) {
+            r.drawText('▲', cx + cw - 20, cy + 92, { color: '#c8a850', size: 15, align: 'center' });
+        }
         for (let vi = 0; vi < visibleCount; vi++) {
             const gen = this._s.availableAttackers[startIdx + vi];
             const gy = cy + 110 + vi * 36;
@@ -781,7 +786,6 @@ export class WorldMapRenderer {
             r.drawPortrait(cx + 14, gy + 2, 30, gen.portrait, gen.name, gen.id);
             r.drawText(gen.name, cx + 50, gy + 8, { color: isEncamped ? '#bb9944' : '#ffe080', size: 13, bold: true });
             r.drawText(`武${gen.war} 统${gen.lead} 兵${gen.soldiers}`, cx + 50, gy + 22, { color: '#aaa', size: 12 });
-            // Status badge
             r.drawText(isEncamped ? '城外' : '城内', cx + cw - 70, gy + 17, {
                 color: isEncamped ? '#cc7700' : '#44aa44', size: 12, baseline: 'middle'
             });
@@ -790,16 +794,13 @@ export class WorldMapRenderer {
             }
         }
 
-        // Scroll indicators
-        if (startIdx > 0) {
-            r.drawText('▲', cx + cw / 2, cy + 104, { color: '#c8a850', size: 14, align: 'center' });
-        }
+        // ▼ scroll indicator — in its own 16px row below generals list
         if (startIdx + visibleCount < this._s.availableAttackers.length) {
-            r.drawText('▼', cx + cw / 2, cy + 110 + visibleCount * 36, { color: '#c8a850', size: 14, align: 'center' });
+            r.drawText('▼', cx + cw - 20, cy + 112 + visibleCount * 36, { color: '#c8a850', size: 15, align: 'center' });
         }
 
-        // Confirm button
-        const confirmY = cy + 120 + visibleCount * 36;
+        // Confirm button — 18px below generals list bottom
+        const confirmY = cy + 128 + visibleCount * 36;
         const canConfirm = this._s.selectedAttackers.length > 0;
         r.drawButton(cx + 130, confirmY, 140, 34, '出征！', canConfirm, 15);
     }
@@ -812,7 +813,7 @@ export class WorldMapRenderer {
         const visibleCount = Math.min(this._s.availableTransfers.length, maxVisible);
         const startIdx = this._s._transferScroll;
 
-        r.roundRect(cx, cy, cw, 100 + visibleCount * 36 + 50, 4, 'rgba(30,15,5,0.95)', '#4488cc');
+        r.roundRect(cx, cy, cw, 177 + visibleCount * 36, 4, 'rgba(30,15,5,0.95)', '#4488cc');
 
         // Title
         r.fillRect(cx, cy, cw, 30, 'rgba(30,60,100,0.8)');
@@ -840,7 +841,10 @@ export class WorldMapRenderer {
 
         // General selection (with scroll)
         const scrollable = this._s.availableTransfers.length > maxVisible;
-        r.drawText(`选择武将${scrollable ? ' [滚轮翻页]' : ''}：`, cx + 10, cy + 92, { color: '#999', size: 15 });
+        r.drawText(`选择武将${scrollable ? ' [滑动/滚轮]' : ''}：`, cx + 10, cy + 92, { color: '#999', size: 15 });
+        if (startIdx > 0) {
+            r.drawText('▲', cx + cw - 20, cy + 92, { color: '#4488cc', size: 15, align: 'center' });
+        }
         for (let vi = 0; vi < visibleCount; vi++) {
             const gen = this._s.availableTransfers[startIdx + vi];
             const gy = cy + 110 + vi * 36;
@@ -855,16 +859,11 @@ export class WorldMapRenderer {
             }
         }
 
-        // Scroll indicators
-        if (startIdx > 0) {
-            r.drawText('▲', cx + cw / 2, cy + 104, { color: '#4488cc', size: 14, align: 'center' });
-        }
         if (startIdx + visibleCount < this._s.availableTransfers.length) {
-            r.drawText('▼', cx + cw / 2, cy + 110 + visibleCount * 36, { color: '#4488cc', size: 14, align: 'center' });
+            r.drawText('▼', cx + cw - 20, cy + 112 + visibleCount * 36, { color: '#4488cc', size: 15, align: 'center' });
         }
 
-        // Confirm button
-        const confirmY = cy + 120 + visibleCount * 36;
+        const confirmY = cy + 128 + visibleCount * 36;
         const canConfirm = this._s.selectedTransfers.length > 0;
         r.drawButton(cx + 130, confirmY, 140, 34, '调遣', canConfirm, 15);
     }
@@ -883,9 +882,13 @@ export class WorldMapRenderer {
         // Title
         r.fillRect(px, py, pw, 30, 'rgba(90,58,16,0.8)');
         const scrollable = generals.length > maxVisible;
-        r.drawText(`武将列表(${generals.length})${scrollable ? ' [滚轮翻页]' : ''}`, px + pw / 2, py + 15, {
+        r.drawText(`武将列表(${generals.length})${scrollable ? ' [滑动/滚轮]' : ''}`, px + pw / 2, py + 15, {
             color: '#ffe080', size: 19, align: 'center', baseline: 'middle', bold: true
         });
+        // Scroll indicators in title bar (to avoid overlapping headers)
+        if (startIdx > 0) {
+            r.drawText('▲ 上翻', px + pw - 60, py + 15, { color: '#c8a850', size: 13, baseline: 'middle' });
+        }
 
         // Headers
         const headers = ['武将', '级', '武', '智', '统', '政', '魅', '兵力', '兵种', '驻地'];
@@ -922,12 +925,9 @@ export class WorldMapRenderer {
             r.drawText(city ? city.name : '-', hx[9], gy + 4, { color: '#aaa', size: 15 });
         }
 
-        // Scroll indicators
-        if (startIdx > 0) {
-            r.drawText('▲ 上翻', px + pw - 60, py + 45, { color: '#c8a850', size: 13 });
-        }
+        // ▼ scroll indicator — below last row, safely inside panel
         if (startIdx + visibleCount < generals.length) {
-            r.drawText('▼ 下翻', px + pw - 60, py + 52 + visibleCount * 30, { color: '#c8a850', size: 13 });
+            r.drawText('▼ 下翻', px + pw - 60, py + 64 + visibleCount * 30, { color: '#c8a850', size: 13, baseline: 'middle' });
         }
     }
 
@@ -940,8 +940,8 @@ export class WorldMapRenderer {
         // Calculate height dynamically based on skill row count
         const skills = gen.skills.map(sid => this._s.gs.getSkill(sid)).filter(Boolean);
         const skillRows = Math.max(1, Math.ceil(skills.length / 4));
-        // title(30) + portrait+info(110) + gap(12) + stats(58) + gap(14) + HP/MP(26) + gap(14) + skills header(22) + skills + gap(16) + equip(50) + pad(16)
-        const ph = 30 + 110 + 12 + 58 + 14 + 26 + 14 + 22 + skillRows * 48 + 16 + 50 + 16;
+        // title(30) + portrait+info(110) + gap(12) + stats(58) + gap(14) + HP/MP(26) + gap(14) + skills header(22) + skills + pad(24)
+        const ph = 30 + 110 + 12 + 58 + 14 + 26 + 14 + 22 + skillRows * 48 + 24;
         const py = Math.max(10, r.height / 2 - ph / 2);
 
         r.roundRect(px, py, pw, ph, 4, 'rgba(30,15,5,0.95)', '#c8a850');
@@ -1183,10 +1183,10 @@ export class WorldMapRenderer {
         if (isBreakthrough) {
             const destCity = this._s.gs.getCity(alert.retreatFinalDestination);
             const destName = destCity ? destCity.name : '己方城池';
-            r.drawText(`撤退路径被 ${defCity.name} 阻断！`, px + pw / 2, py + 52, {
+            r.drawText(`撤退路径被 ${defCity.name} 阻断！`, px + pw / 2, py + 50, {
                 color: '#ffaa44', size: 16, align: 'center', baseline: 'middle', shadow: true
             });
-            r.drawText(`迎战或直接突围撤退回 ${destName}`, px + pw / 2, py + 72, {
+            r.drawText(`迎战或直接突围撤退回 ${destName}`, px + pw / 2, py + 68, {
                 color: '#ccaa66', size: 14, align: 'center', baseline: 'middle'
             });
         } else if (isPlayerAttacking) {
@@ -1335,13 +1335,13 @@ export class WorldMapRenderer {
             r.drawText(report.text, px + 46, ry + 6, { color, size: 17, maxWidth: pw - 68 });
         }
 
-        // Scroll arrows
+        // Scroll arrows — side by side in scroll row to avoid overlap
         const scrollRowY = py + 40 + visibleCount * 32;
         if (startIdx > 0) {
-            r.drawText('▲ 上翻', px + pw - 60, scrollRowY + 6, { color: '#ffe080', size: 16 });
+            r.drawText('▲ 上翻', px + 30, scrollRowY + 14, { color: '#ffe080', size: 15, baseline: 'middle' });
         }
         if (startIdx + visibleCount < this._s.turnReports.length) {
-            r.drawText('▼ 下翻', px + pw - 60, scrollRowY + 24, { color: '#ffe080', size: 16 });
+            r.drawText('▼ 下翻', px + pw - 90, scrollRowY + 14, { color: '#ffe080', size: 15, baseline: 'middle' });
         }
 
         // Close hint at the very bottom of the panel, clearly separated
