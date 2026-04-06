@@ -42,6 +42,11 @@ export default class WorldMapScene {
         this._transferScroll = 0;
         this._cityGenScroll = 0;
 
+        // Touch drag-as-scroll state (for city panel and attack panel)
+        this._dragInPanel = false;
+        this._dragLastDy = 0;
+        this._dragScrollAccum = 0;
+
         // Map animation
         this.cloudOffset = 0;
         this.flagWave = 0;
@@ -271,16 +276,42 @@ export default class WorldMapScene {
             }
         }
 
-        // Drag to pan map (only when not hovering a city/clicking)
+        // Drag to pan map — but if drag starts inside city panel, treat as scroll instead
         const drag = input.getDrag();
+        const panelX = r.width - 280;
         if (drag && !this._wasDragging) {
             this._dragStartCamX = this._camX;
             this._dragStartCamY = this._camY;
+            this._dragInPanel = this.showCityPanel && drag.startX >= panelX;
+            this._dragLastDy = 0;
+            this._dragScrollAccum = 0;
         }
         this._wasDragging = !!drag;
         if (drag) {
-            this._camX = Math.max(0, Math.min(maxCamX, this._dragStartCamX - drag.dx));
-            this._camY = Math.max(0, Math.min(maxCamY, this._dragStartCamY - drag.dy));
+            if (this._dragInPanel && this.showCityPanel && this.selectedCity) {
+                // Convert vertical drag to scroll steps for the generals list
+                const deltaDy = drag.dy - this._dragLastDy;
+                this._dragLastDy = drag.dy;
+                this._dragScrollAccum += deltaDy;
+                const threshold = 30;
+                while (this._dragScrollAccum <= -threshold) {
+                    const gens = this.gs.getGeneralsInCity(this.selectedCity.id);
+                    this._cityGenScroll = Math.min(Math.max(0, gens.length - 4), this._cityGenScroll + 1);
+                    this._dragScrollAccum += threshold;
+                }
+                while (this._dragScrollAccum >= threshold) {
+                    this._cityGenScroll = Math.max(0, this._cityGenScroll - 1);
+                    this._dragScrollAccum -= threshold;
+                }
+            } else if (!this._dragInPanel) {
+                this._camX = Math.max(0, Math.min(maxCamX, this._dragStartCamX - drag.dx));
+                this._camY = Math.max(0, Math.min(maxCamY, this._dragStartCamY - drag.dy));
+            }
+        }
+        if (!drag) {
+            this._dragInPanel = false;
+            this._dragLastDy = 0;
+            this._dragScrollAccum = 0;
         }
 
         // Mouse coords in virtual map space (add camera offset)
@@ -429,6 +460,21 @@ export default class WorldMapScene {
                 }
             }
 
+            // ▲/▼ scroll arrows for generals list (x = panelX + 270 - 20 = panelX + 250)
+            if (generals.length > maxVisible) {
+                const infoY = genListY + maxVisible * 40 + 4;
+                if (click.x >= panelX + 230 && click.x <= panelX + 270) {
+                    if (click.y >= genListY - 18 && click.y <= genListY + 2) {
+                        this._cityGenScroll = Math.max(0, this._cityGenScroll - 1);
+                        return true;
+                    }
+                    if (click.y >= infoY - 10 && click.y <= infoY + 10) {
+                        this._cityGenScroll = Math.min(Math.max(0, generals.length - maxVisible), this._cityGenScroll + 1);
+                        return true;
+                    }
+                }
+            }
+
             // Captive recruit/execute buttons — must match _drawCityPanel captive layout
             const captives = this.gs.getCapturedInCity(city.id);
             if (captives.length > 0) {
@@ -557,12 +603,34 @@ export default class WorldMapScene {
     }
 
     _handleAttackSelect() {
-        // Handle scroll
+        // Handle scroll wheel
         const scroll = this.input.consumeScroll();
         if (scroll) {
             const maxScroll = Math.max(0, this.availableAttackers.length - 8);
             this._attackScroll = Math.max(0, Math.min(maxScroll, this._attackScroll + (scroll > 0 ? 1 : -1)));
         }
+
+        // Handle touch/mouse drag as scroll
+        const drag = this.input.getDrag();
+        if (drag) {
+            const deltaDy = drag.dy - this._dragLastDy;
+            this._dragLastDy = drag.dy;
+            this._dragScrollAccum += deltaDy;
+            const threshold = 36;
+            while (this._dragScrollAccum <= -threshold) {
+                const maxScroll = Math.max(0, this.availableAttackers.length - 8);
+                this._attackScroll = Math.min(maxScroll, this._attackScroll + 1);
+                this._dragScrollAccum += threshold;
+            }
+            while (this._dragScrollAccum >= threshold) {
+                this._attackScroll = Math.max(0, this._attackScroll - 1);
+                this._dragScrollAccum -= threshold;
+            }
+        } else {
+            this._dragLastDy = 0;
+            this._dragScrollAccum = 0;
+        }
+        if (this.input.isDragging) return;
 
         const click = this.input.getClick();
         if (!click) return;
@@ -591,8 +659,25 @@ export default class WorldMapScene {
             }
         }
 
-        // General selection toggle (with scroll)
+        // ▲/▼ scroll arrows — drawn at cx + cw/2 (x=440), cy+104 and cy+110+visibleCount*36
         const maxVisible = 8;
+        const visibleCountNow = Math.min(this.availableAttackers.length, maxVisible);
+        const arrowX = cx + cw / 2;
+        if (this._attackScroll > 0 &&
+            click.x >= arrowX - 20 && click.x <= arrowX + 20 &&
+            click.y >= cy + 94 && click.y <= cy + 116) {
+            this._attackScroll = Math.max(0, this._attackScroll - 1);
+            return;
+        }
+        if (this._attackScroll + visibleCountNow < this.availableAttackers.length &&
+            click.x >= arrowX - 20 && click.x <= arrowX + 20 &&
+            click.y >= cy + 100 + visibleCountNow * 36 && click.y <= cy + 122 + visibleCountNow * 36) {
+            const maxScroll = Math.max(0, this.availableAttackers.length - 8);
+            this._attackScroll = Math.min(maxScroll, this._attackScroll + 1);
+            return;
+        }
+
+        // General selection toggle (with scroll)
         const startIdx = this._attackScroll;
         for (let vi = 0; vi < maxVisible && startIdx + vi < this.availableAttackers.length; vi++) {
             const gy = cy + 110 + vi * 36;
@@ -610,8 +695,7 @@ export default class WorldMapScene {
         }
 
         // Confirm button
-        const visibleCount = Math.min(this.availableAttackers.length, maxVisible);
-        const confirmY = cy + 120 + visibleCount * 36;
+        const confirmY = cy + 120 + visibleCountNow * 36;
         if (click.x >= cx + 130 && click.x <= cx + 270 && click.y >= confirmY && click.y <= confirmY + 36) {
             if (this.selectedAttackers.length > 0 && this.attackTarget) {
                 // Create march instead of instant battle
@@ -665,12 +749,34 @@ export default class WorldMapScene {
     }
 
     _handleTransferSelect() {
-        // Handle scroll
+        // Handle scroll wheel
         const scroll = this.input.consumeScroll();
         if (scroll) {
             const maxScroll = Math.max(0, this.availableTransfers.length - 8);
             this._transferScroll = Math.max(0, Math.min(maxScroll, this._transferScroll + (scroll > 0 ? 1 : -1)));
         }
+
+        // Handle touch/mouse drag as scroll
+        const drag = this.input.getDrag();
+        if (drag) {
+            const deltaDy = drag.dy - this._dragLastDy;
+            this._dragLastDy = drag.dy;
+            this._dragScrollAccum += deltaDy;
+            const threshold = 36;
+            while (this._dragScrollAccum <= -threshold) {
+                const maxScroll = Math.max(0, this.availableTransfers.length - 8);
+                this._transferScroll = Math.min(maxScroll, this._transferScroll + 1);
+                this._dragScrollAccum += threshold;
+            }
+            while (this._dragScrollAccum >= threshold) {
+                this._transferScroll = Math.max(0, this._transferScroll - 1);
+                this._dragScrollAccum -= threshold;
+            }
+        } else {
+            this._dragLastDy = 0;
+            this._dragScrollAccum = 0;
+        }
+        if (this.input.isDragging) return;
 
         const click = this.input.getClick();
         if (!click) return;
@@ -699,8 +805,25 @@ export default class WorldMapScene {
             }
         }
 
-        // General selection toggle (with scroll)
+        // ▲/▼ scroll arrows — same positions as attack panel
         const maxVisible = 8;
+        const visibleCountNow = Math.min(this.availableTransfers.length, maxVisible);
+        const arrowX = cx + cw / 2;
+        if (this._transferScroll > 0 &&
+            click.x >= arrowX - 20 && click.x <= arrowX + 20 &&
+            click.y >= cy + 94 && click.y <= cy + 116) {
+            this._transferScroll = Math.max(0, this._transferScroll - 1);
+            return;
+        }
+        if (this._transferScroll + visibleCountNow < this.availableTransfers.length &&
+            click.x >= arrowX - 20 && click.x <= arrowX + 20 &&
+            click.y >= cy + 100 + visibleCountNow * 36 && click.y <= cy + 122 + visibleCountNow * 36) {
+            const maxScroll = Math.max(0, this.availableTransfers.length - 8);
+            this._transferScroll = Math.min(maxScroll, this._transferScroll + 1);
+            return;
+        }
+
+        // General selection toggle (with scroll)
         const startIdx = this._transferScroll;
         for (let vi = 0; vi < maxVisible && startIdx + vi < this.availableTransfers.length; vi++) {
             const gy = cy + 110 + vi * 36;
@@ -718,8 +841,7 @@ export default class WorldMapScene {
         }
 
         // Confirm button
-        const visibleCount = Math.min(this.availableTransfers.length, maxVisible);
-        const confirmY = cy + 120 + visibleCount * 36;
+        const confirmY = cy + 120 + visibleCountNow * 36;
         if (click.x >= cx + 130 && click.x <= cx + 270 && click.y >= confirmY && click.y <= confirmY + 36) {
             if (this.selectedTransfers.length > 0 && this.transferTarget) {
                 // Create march instead of instant transfer

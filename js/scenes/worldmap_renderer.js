@@ -680,7 +680,7 @@ export class WorldMapRenderer {
             } else if (generals.length > maxVisible) {
                 // Scroll indicator
                 const infoY = genListY + maxVisible * 40 + 4;
-                const scrollInfo = `${startIdx + 1}-${Math.min(startIdx + maxVisible, generals.length)} / ${generals.length}  [滚轮翻页]`;
+                const scrollInfo = `${startIdx + 1}-${Math.min(startIdx + maxVisible, generals.length)} / ${generals.length}  [滑动/滚轮]`;
                 r.drawText(scrollInfo, px + pw / 2, infoY, {
                     color: '#777', size: 16, align: 'center'
                 });
