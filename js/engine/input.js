@@ -3,7 +3,7 @@ export default class InputManager {
     constructor(canvas) {
         this.canvas = canvas;
         this.keys = {};
-        this.mouse = { x: 0, y: 0, worldX: 0, worldY: 0, down: false, button: 0 };
+        this.mouse = { x: 0, y: 0, worldX: 0, worldY: 0, down: false, button: 0, clientX: 0, clientY: 0 };
         this.clicks = [];
         this.rightClicks = [];
         this.scrollDelta = 0;
@@ -43,6 +43,8 @@ export default class InputManager {
             const coords = this._getCanvasCoords(e.clientX, e.clientY);
             this.mouse.x = coords.x;
             this.mouse.y = coords.y;
+            this.mouse.clientX = e.clientX;
+            this.mouse.clientY = e.clientY;
 
             if (this.mouse.down && this.dragStart) {
                 const dx = this.mouse.x - this.dragStart.x;
@@ -57,6 +59,8 @@ export default class InputManager {
             const coords = this._getCanvasCoords(e.clientX, e.clientY);
             this.mouse.x = coords.x;
             this.mouse.y = coords.y;
+            this.mouse.clientX = e.clientX;
+            this.mouse.clientY = e.clientY;
             this.mouse.down = true;
             this.mouse.button = e.button;
             this.dragStart = { x: this.mouse.x, y: this.mouse.y };
@@ -142,6 +146,8 @@ export default class InputManager {
             const coords = this._getCanvasCoords(touch.clientX, touch.clientY);
             this.mouse.x = coords.x;
             this.mouse.y = coords.y;
+            this.mouse.clientX = touch.clientX;
+            this.mouse.clientY = touch.clientY;
             if (this.touchStart) {
                 const dx = this.mouse.x - this.touchStart.x;
                 const dy = this.mouse.y - this.touchStart.y;

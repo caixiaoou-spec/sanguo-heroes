@@ -276,42 +276,45 @@ export default class WorldMapScene {
             }
         }
 
-        // Drag to pan map — but if drag starts inside city panel, treat as scroll instead
+        // Drag to pan map — when CSS-zoomed, pinchzoom handles panning instead
+        const cssZoomed = this.game.pinchZoom && this.game.pinchZoom.zoom > 1;
         const drag = input.getDrag();
         const panelX = r.width - 280;
-        if (drag && !this._wasDragging) {
-            this._dragStartCamX = this._camX;
-            this._dragStartCamY = this._camY;
-            this._dragInPanel = this.showCityPanel && drag.startX >= panelX;
-            this._dragLastDy = 0;
-            this._dragScrollAccum = 0;
-        }
-        this._wasDragging = !!drag;
-        if (drag) {
-            if (this._dragInPanel && this.showCityPanel && this.selectedCity) {
-                // Convert vertical drag to scroll steps for the generals list
-                const deltaDy = drag.dy - this._dragLastDy;
-                this._dragLastDy = drag.dy;
-                this._dragScrollAccum += deltaDy;
-                const threshold = 30;
-                while (this._dragScrollAccum <= -threshold) {
-                    const gens = this.gs.getGeneralsInCity(this.selectedCity.id);
-                    this._cityGenScroll = Math.min(Math.max(0, gens.length - 4), this._cityGenScroll + 1);
-                    this._dragScrollAccum += threshold;
-                }
-                while (this._dragScrollAccum >= threshold) {
-                    this._cityGenScroll = Math.max(0, this._cityGenScroll - 1);
-                    this._dragScrollAccum -= threshold;
-                }
-            } else if (!this._dragInPanel) {
-                this._camX = Math.max(0, Math.min(maxCamX, this._dragStartCamX - drag.dx));
-                this._camY = Math.max(0, Math.min(maxCamY, this._dragStartCamY - drag.dy));
+        if (!cssZoomed) {
+            if (drag && !this._wasDragging) {
+                this._dragStartCamX = this._camX;
+                this._dragStartCamY = this._camY;
+                this._dragInPanel = this.showCityPanel && drag.startX >= panelX;
+                this._dragLastDy = 0;
+                this._dragScrollAccum = 0;
             }
-        }
-        if (!drag) {
-            this._dragInPanel = false;
-            this._dragLastDy = 0;
-            this._dragScrollAccum = 0;
+            this._wasDragging = !!drag;
+            if (drag) {
+                if (this._dragInPanel && this.showCityPanel && this.selectedCity) {
+                    // Convert vertical drag to scroll steps for the generals list
+                    const deltaDy = drag.dy - this._dragLastDy;
+                    this._dragLastDy = drag.dy;
+                    this._dragScrollAccum += deltaDy;
+                    const threshold = 30;
+                    while (this._dragScrollAccum <= -threshold) {
+                        const gens = this.gs.getGeneralsInCity(this.selectedCity.id);
+                        this._cityGenScroll = Math.min(Math.max(0, gens.length - 4), this._cityGenScroll + 1);
+                        this._dragScrollAccum += threshold;
+                    }
+                    while (this._dragScrollAccum >= threshold) {
+                        this._cityGenScroll = Math.max(0, this._cityGenScroll - 1);
+                        this._dragScrollAccum -= threshold;
+                    }
+                } else if (!this._dragInPanel) {
+                    this._camX = Math.max(0, Math.min(maxCamX, this._dragStartCamX - drag.dx));
+                    this._camY = Math.max(0, Math.min(maxCamY, this._dragStartCamY - drag.dy));
+                }
+            }
+            if (!drag) {
+                this._dragInPanel = false;
+                this._dragLastDy = 0;
+                this._dragScrollAccum = 0;
+            }
         }
 
         // Mouse coords in virtual map space (add camera offset)
