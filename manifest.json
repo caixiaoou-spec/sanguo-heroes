@@ -1,7 +1,7 @@
 {
     "name": "三国英雄传",
     "short_name": "三国英雄传",
-    "description": "三国英雄传——蔡博尧版",
+    "description": "三国英雄传",
     "start_url": "./index.html",
     "display": "fullscreen",
     "orientation": "any",

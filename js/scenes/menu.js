@@ -116,7 +116,7 @@ export default class MenuScene {
         ctx.restore();
 
         // Subtitle
-        r.drawText('蔡博尧版', cx, r.height * 0.28, {
+        r.drawText('三国策略游戏', cx, r.height * 0.28, {
             color: '#c8a850', size: 23, align: 'center', baseline: 'middle',
             shadow: true
         });

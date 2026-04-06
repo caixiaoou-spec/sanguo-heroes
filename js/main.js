@@ -1,4 +1,4 @@
-// 三国英雄传——蔡博尧版 - 游戏入口与主循环
+// 三国英雄传 - 游戏入口与主循环
 import Renderer from './engine/renderer.js';
 import InputManager from './engine/input.js';
 import AudioManager from './engine/audio.js';
