@@ -215,6 +215,15 @@ export default class GameState {
     getUnaffiliatedGenerals() { return this.generals.filter(g => g.faction === 'none' && g.status !== 'dead'); }
     getCapturedInCity(cityId) { return this.generals.filter(g => g.city === cityId && g.status === 'captured'); }
 
+    removeGeneralFromCity(cityId, genId) {
+        const city = this.getCity(cityId);
+        if (city) city.generals = city.generals.filter(gid => gid !== genId);
+    }
+    addGeneralToCity(cityId, genId) {
+        const city = this.getCity(cityId);
+        if (city && !city.generals.includes(genId)) city.generals.push(genId);
+    }
+
     getAliveFactions() { return this.factions.filter(f => f.alive); }
 
     // Check victory

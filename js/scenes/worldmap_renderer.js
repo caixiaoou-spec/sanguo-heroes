@@ -558,9 +558,8 @@ export class WorldMapRenderer {
         const allCityGens = isOwned ? this._s.gs.getGeneralsInCity(city.id) : [];
         const visibleGens = Math.min(allCityGens.length, 4);
         const genBlockH = visibleGens > 0 ? 26 + visibleGens * 40 + (allCityGens.length > visibleGens ? 20 : 0) : 36;
-        const captiveBlockH = captives.length > 0 ? 26 + captives.length * 36 + 10 : 0;
-        // actSectionY=py+160, buttons=4rows*30+24=144, genSection=+12
-        const baseH = isOwned ? (160 + 28 + 4 * 30 + 24 + 12 + genBlockH + captiveBlockH + 16) : 220;
+        const captiveBlockH = isOwned ? (captives.length > 0 ? 26 + captives.length * 36 + 10 : 44) : 0;
+        const baseH = isOwned ? (160 + 28 + 3 * 30 + 24 + 12 + genBlockH + captiveBlockH + 16) : 220;
         const ph = Math.max(545, baseH);
 
         // Panel background with slight gradient
@@ -693,34 +692,37 @@ export class WorldMapRenderer {
                 }
             }
 
-            // ─── Section: Captives (placed after generals list) ───
-            if (captives.length > 0) {
-                const genListEnd = genListY + Math.max(visibleGens, 1) * 40 + (generals.length === 0 ? 20 : 0) + 12;
+            // ─── Section: Captives (always shown for owned cities) ───
+            {
+                const scrollRowH = generals.length > maxVisible ? 24 : 0;
+                const genListEnd = genListY + Math.max(maxVisible, 1) * 40 + (generals.length === 0 ? 20 : 0) + scrollRowH + 12;
                 const capSectionY = genListEnd;
                 r.drawLine(px + 14, capSectionY, px + pw - 14, capSectionY, '#c8a85044', 1);
                 r.drawText(`囚禁武将 (${captives.length})`, px + 14, capSectionY + 10, { color: '#cc4444', size: 14, bold: true });
-                const mx = this._s.input.mouse.x;
-                const my = this._s.input.mouse.y;
-                for (let i = 0; i < captives.length; i++) {
-                    const cap = captives[i];
-                    const gy = capSectionY + 26 + i * 36;
-                    r.fillRect(px + 6, gy - 2, pw - 12, 34, 'rgba(80,20,20,0.3)');
-                    r.drawPortrait(px + 12, gy, 28, cap.portrait, cap.name, cap.id);
-                    const origFaction = this._s.gs.getFaction(cap.originalFaction);
-                    r.drawText(cap.name, px + 46, gy + 2, { color: '#ffaa88', size: 13, bold: true });
-                    r.drawText(`原：${origFaction ? origFaction.name : '无主'}  Lv${cap.level}`, px + 46, gy + 16, { color: '#888', size: 12 });
-                    const recX = px + pw - 120;
-                    const exeX = px + pw - 60;
-                    const btnY = gy + 4;
-                    const btnH2 = 22;
-                    const recHover = mx >= recX && mx <= recX + 52 && my >= btnY && my <= btnY + btnH2;
-                    const exeHover = mx >= exeX && mx <= exeX + 52 && my >= btnY && my <= btnY + btnH2;
-                    r.roundRect(recX, btnY, 52, btnH2, 3,
-                        recHover ? 'rgba(40,120,40,0.9)' : 'rgba(20,60,20,0.8)', '#44aa44');
-                    r.drawText('招降', recX + 26, btnY + 11, { color: '#88ff88', size: 12, align: 'center', baseline: 'middle' });
-                    r.roundRect(exeX, btnY, 52, btnH2, 3,
-                        exeHover ? 'rgba(140,30,30,0.9)' : 'rgba(70,15,15,0.8)', '#aa4444');
-                    r.drawText('斩杀', exeX + 26, btnY + 11, { color: '#ff8888', size: 12, align: 'center', baseline: 'middle' });
+                if (captives.length === 0) {
+                    r.drawText('暂无俘虏', px + pw / 2, capSectionY + 28, { color: '#555', size: 13, align: 'center' });
+                } else {
+                    for (let i = 0; i < captives.length; i++) {
+                        const cap = captives[i];
+                        const gy = capSectionY + 26 + i * 36;
+                        r.fillRect(px + 6, gy - 2, pw - 12, 34, 'rgba(80,20,20,0.3)');
+                        r.drawPortrait(px + 12, gy, 28, cap.portrait, cap.name, cap.id);
+                        const origFaction = this._s.gs.getFaction(cap.originalFaction);
+                        r.drawText(cap.name, px + 46, gy + 2, { color: '#ffaa88', size: 13, bold: true });
+                        r.drawText(`原：${origFaction ? origFaction.name : '无主'}  Lv${cap.level}`, px + 46, gy + 16, { color: '#888', size: 12 });
+                        const recX = px + pw - 120;
+                        const exeX = px + pw - 60;
+                        const btnY = gy + 4;
+                        const btnH2 = 22;
+                        const recHover = mx >= recX && mx <= recX + 52 && my >= btnY && my <= btnY + btnH2;
+                        const exeHover = mx >= exeX && mx <= exeX + 52 && my >= btnY && my <= btnY + btnH2;
+                        r.roundRect(recX, btnY, 52, btnH2, 3,
+                            recHover ? 'rgba(40,120,40,0.9)' : 'rgba(20,60,20,0.8)', '#44aa44');
+                        r.drawText('招降', recX + 26, btnY + 11, { color: '#88ff88', size: 12, align: 'center', baseline: 'middle' });
+                        r.roundRect(exeX, btnY, 52, btnH2, 3,
+                            exeHover ? 'rgba(140,30,30,0.9)' : 'rgba(70,15,15,0.8)', '#aa4444');
+                        r.drawText('斩杀', exeX + 26, btnY + 11, { color: '#ff8888', size: 12, align: 'center', baseline: 'middle' });
+                    }
                 }
             }
         } else {

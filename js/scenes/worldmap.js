@@ -946,6 +946,8 @@ export default class WorldMapScene {
             if (gen.status !== 'captured') continue;
             if (Math.random() > 0.40) continue;
 
+            gs.removeGeneralFromCity(gen.city, gen.id);
+
             // Find original faction (stored in gen.faction before capture, but it was set to 'none')
             // Use originalFaction field if set, else try to find by id match in FACTIONS_DATA
             const origFactionId = gen.originalFaction || null;

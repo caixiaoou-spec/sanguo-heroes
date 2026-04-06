@@ -626,10 +626,21 @@ export default class CombatSystem {
                     gen.hp = Math.floor(gen.maxHp * 0.3);
                     gen.originalFaction = gen.faction;
                     gen.faction = 'none';
-                    const oldCity = gs.getCity(gen.city);
-                    if (oldCity) oldCity.generals = oldCity.generals.filter(gid => gid !== gen.id);
-                    // Hold prisoner in the battle city (now controlled by winners)
-                    gen.city = battleCityId;
+                    gs.removeGeneralFromCity(gen.city, gen.id);
+                    // For interception battles there is no defender city; use winner's source city instead
+                    let prisonCityId = battleCityId;
+                    if (!prisonCityId && battle.isInterception) {
+                        const winnerIsAttacker = winners === battle.attacker;
+                        prisonCityId = winnerIsAttacker
+                            ? (battle.attackerSourceCity || null)
+                            : (battle.defenderSourceCity || null);
+                        if (!prisonCityId) {
+                            const winnerCities = gs.getCitiesOf(winners.faction.id);
+                            if (winnerCities.length > 0) prisonCityId = winnerCities[0].id;
+                        }
+                    }
+                    gen.city = prisonCityId;
+                    gs.addGeneralToCity(prisonCityId, gen.id);
                     results.captures.push(gen);
                 } else {
                     // Escaped — retreat march to home city
