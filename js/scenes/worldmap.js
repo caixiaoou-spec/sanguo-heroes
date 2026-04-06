@@ -65,8 +65,8 @@ export default class WorldMapScene {
         this._camX = 0;
         this._camY = 0;
         this._wasDragging = false;
-        this._dragStartCamX = 0;
-        this._dragStartCamY = 0;
+        this._prevDragClientX = null;
+        this._prevDragClientY = null;
 
         // Play map BGM when entering worldmap
         if (!game.audio.muted) {
@@ -282,11 +282,11 @@ export default class WorldMapScene {
         const panelX = r.width - 280;
         if (!cssZoomed) {
             if (drag && !this._wasDragging) {
-                this._dragStartCamX = this._camX;
-                this._dragStartCamY = this._camY;
                 this._dragInPanel = this.showCityPanel && drag.startX >= panelX;
                 this._dragLastDy = 0;
                 this._dragScrollAccum = 0;
+                this._prevDragClientX = null;
+                this._prevDragClientY = null;
             }
             this._wasDragging = !!drag;
             if (drag) {
@@ -306,14 +306,25 @@ export default class WorldMapScene {
                         this._dragScrollAccum -= threshold;
                     }
                 } else if (!this._dragInPanel) {
-                    this._camX = Math.max(0, Math.min(maxCamX, this._dragStartCamX - drag.dx));
-                    this._camY = Math.max(0, Math.min(maxCamY, this._dragStartCamY - drag.dy));
+                    // Delta approach: add per-frame screen movement to camera
+                    if (this._prevDragClientX !== null) {
+                        const scaleX = this.renderer.width / window.innerWidth;
+                        const scaleY = this.renderer.height / window.innerHeight;
+                        const ddx = (input.mouse.clientX - this._prevDragClientX) * scaleX;
+                        const ddy = (input.mouse.clientY - this._prevDragClientY) * scaleY;
+                        this._camX = Math.max(0, Math.min(maxCamX, this._camX - ddx));
+                        this._camY = Math.max(0, Math.min(maxCamY, this._camY - ddy));
+                    }
+                    this._prevDragClientX = input.mouse.clientX;
+                    this._prevDragClientY = input.mouse.clientY;
                 }
             }
             if (!drag) {
                 this._dragInPanel = false;
                 this._dragLastDy = 0;
                 this._dragScrollAccum = 0;
+                this._prevDragClientX = null;
+                this._prevDragClientY = null;
             }
         }
 
