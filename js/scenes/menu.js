@@ -74,9 +74,6 @@ export default class MenuScene {
                     this.game.audio.toggleMute();
                     break;
             }
-        } else if (click && this.selectedBtn < 0) {
-            this.game.audio.playSFX('click');
-            this.game.switchScene('faction_select');
         }
     }
 
@@ -153,11 +150,6 @@ export default class MenuScene {
             color: '#888', size: 17, align: 'center', baseline: 'middle'
         });
 
-        // Credits
-        r.drawText('点击任意处开始', cx, r.height * 0.82, {
-            color: `rgba(200,168,80,${0.5 + Math.sin(this.titlePulse * 1.5) * 0.5})`,
-            size: 19, align: 'center', baseline: 'middle'
-        });
     }
 
     _drawDecoration(ctx, bx, by, bw, bh) {
