@@ -162,6 +162,11 @@ export default class InputManager {
                 this._twoFingerActive = false;
                 this.isPinching = false;
                 this.pinchDelta = 0;
+                // Clear single-finger state so the next single-finger drag starts fresh
+                this.mouse.down = false;
+                this.isDragging = false;
+                this.touchStart = null;
+                this.dragStart = null;
                 return;
             }
             if (!this.isDragging && this.touchStart) {
