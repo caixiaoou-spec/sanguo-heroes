@@ -65,8 +65,8 @@ export default class WorldMapScene {
         this._camX = 0;
         this._camY = 0;
         this._wasDragging = false;
-        this._prevDragClientX = null;
-        this._prevDragClientY = null;
+        this._lastDragDx = 0;
+        this._lastDragDy = 0;
 
         // Play map BGM when entering worldmap
         if (!game.audio.muted) {
@@ -284,8 +284,8 @@ export default class WorldMapScene {
         // Always reset drag state when no drag — even if cssZoomed, to prevent stale state
         if (!drag) {
             this._wasDragging = false;
-            this._prevDragClientX = null;
-            this._prevDragClientY = null;
+            this._lastDragDx = 0;
+            this._lastDragDy = 0;
             this._dragInPanel = false;
             this._dragLastDy = 0;
             this._dragScrollAccum = 0;
@@ -293,12 +293,12 @@ export default class WorldMapScene {
 
         if (!cssZoomed && drag) {
             if (!this._wasDragging) {
-                // New drag started
+                // New drag started — snapshot current drag.dx/dy as baseline
                 this._dragInPanel = this.showCityPanel && drag.startX >= panelX;
-                this._dragLastDy = 0;
+                this._dragLastDy = drag.dy;
                 this._dragScrollAccum = 0;
-                this._prevDragClientX = null;
-                this._prevDragClientY = null;
+                this._lastDragDx = drag.dx;
+                this._lastDragDy = drag.dy;
                 this._wasDragging = true;
             }
             if (this._dragInPanel && this.showCityPanel && this.selectedCity) {
@@ -317,17 +317,13 @@ export default class WorldMapScene {
                     this._dragScrollAccum -= threshold;
                 }
             } else if (!this._dragInPanel) {
-                // Delta approach: add per-frame screen movement to camera
-                if (this._prevDragClientX !== null) {
-                    const scaleX = this.renderer.width / window.innerWidth;
-                    const scaleY = this.renderer.height / window.innerHeight;
-                    const ddx = (input.mouse.clientX - this._prevDragClientX) * scaleX;
-                    const ddy = (input.mouse.clientY - this._prevDragClientY) * scaleY;
-                    this._camX = Math.max(0, Math.min(maxCamX, this._camX - ddx));
-                    this._camY = Math.max(0, Math.min(maxCamY, this._camY - ddy));
-                }
-                this._prevDragClientX = input.mouse.clientX;
-                this._prevDragClientY = input.mouse.clientY;
+                // Per-frame delta from drag.dx/dy (always relative to current touch's dragStart)
+                const ddx = drag.dx - this._lastDragDx;
+                const ddy = drag.dy - this._lastDragDy;
+                this._lastDragDx = drag.dx;
+                this._lastDragDy = drag.dy;
+                this._camX = Math.max(0, Math.min(maxCamX, this._camX - ddx));
+                this._camY = Math.max(0, Math.min(maxCamY, this._camY - ddy));
             }
         }
 
