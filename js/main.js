@@ -22,7 +22,7 @@ class Game {
         this.saveManager = new SaveManager();
         this.gameState = new GameState();
         this.eventSystem = new EventSystem(this.gameState);
-        this.pinchZoom = new PinchZoom(this.container);
+        this.pinchZoom = new PinchZoom(this.canvas);
 
         this.currentScene = null;
         this.lastTime = 0;

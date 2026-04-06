@@ -12,14 +12,10 @@ export default class Renderer {
         canvas.height = this.height * this.dpr;
         this.ctx.scale(this.dpr, this.dpr);
 
-        // Letterbox fit: maintain 1280×800 aspect ratio, centered in viewport
+        // Stretch canvas to fill the full viewport — no letterbox bars
         const fitCanvas = () => {
-            const scale = Math.min(
-                window.innerWidth  / this.width,
-                window.innerHeight / this.height
-            );
-            canvas.style.width  = Math.round(this.width  * scale) + 'px';
-            canvas.style.height = Math.round(this.height * scale) + 'px';
+            canvas.style.width  = window.innerWidth  + 'px';
+            canvas.style.height = window.innerHeight + 'px';
         };
         fitCanvas();
         window.addEventListener('resize', fitCanvas);

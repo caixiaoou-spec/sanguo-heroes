@@ -26,9 +26,10 @@ body {
 
 #game-canvas {
     display: block;
-    /* Display size is set dynamically by renderer.js to maintain 1280:800 aspect ratio */
+    /* Display size is set dynamically by renderer.js to fill the viewport */
     touch-action: none;
     -webkit-tap-highlight-color: transparent;
+    transform-origin: center center;
 }
 
 /* Portrait orientation warning */

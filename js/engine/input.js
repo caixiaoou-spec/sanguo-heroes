@@ -124,8 +124,8 @@ export default class InputManager {
                 const dd = dist - this._twoFingerLastDist;   // positive = fingers spreading apart
                 const dy = this._twoFingerLastY - midY;      // positive = fingers moving up
 
-                // Classify as pinch when distance change dominates movement
-                if (Math.abs(dd) > 4 && Math.abs(dd) > Math.abs(dy) * 0.4) {
+                // Pinch = fingers clearly spreading/closing; scroll = fingers moving together
+                if (Math.abs(dd) > 3) {
                     this.isPinching = true;
                     this.pinchDelta = dd;
                 } else {
