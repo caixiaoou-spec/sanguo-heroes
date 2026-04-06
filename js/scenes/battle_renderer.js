@@ -41,9 +41,9 @@ export class BattleRenderer {
 
         const atkFaction = this._s.battle.attacker.faction;
         const defFaction = this._s.battle.defender.faction;
-        r.drawText(`攻方: ${atkFaction.name}`, 20, 18, { color: '#44aaff', size: 19, bold: true, shadow: true });
+        r.drawText(`攻方: ${atkFaction ? atkFaction.name : '???'}`, 20, 18, { color: '#44aaff', size: 19, bold: true, shadow: true });
         r.drawText('选将出战', r.width / 2, 18, { color: '#ffe080', size: 23, align: 'center', bold: true, shadow: true });
-        r.drawText(`守方: ${defFaction.name}`, r.width - 20, 18, { color: '#ff6644', size: 19, align: 'right', bold: true, shadow: true });
+        r.drawText(`守方: ${defFaction ? defFaction.name : '???'}`, r.width - 20, 18, { color: '#ff6644', size: 19, align: 'right', bold: true, shadow: true });
 
         // Score display — below the gold line
         const score = this._s.battle.matchScore;
@@ -252,8 +252,8 @@ export class BattleRenderer {
 
         const atkFaction = this._s.battle.attacker.faction;
         const defFaction = this._s.battle.defender.faction;
-        r.drawText(`攻方: ${atkFaction.name}`, 20, 36, { color: '#44aaff', size: 15 });
-        r.drawText(`守方: ${defFaction.name}`, r.width - 20, 36, { color: '#ff6644', size: 15, align: 'right' });
+        r.drawText(`攻方: ${atkFaction ? atkFaction.name : '???'}`, 20, 36, { color: '#44aaff', size: 15 });
+        r.drawText(`守方: ${defFaction ? defFaction.name : '???'}`, r.width - 20, 36, { color: '#ff6644', size: 15, align: 'right' });
 
         // Left panel - formation buttons
         const panelX = 20;

@@ -1211,7 +1211,7 @@ const generals = [
   {
     id: 'zhuge_dan', name: '诸葛诞', faction: 'none',
     stats: { war: 68, int: 72, lead: 70, pol: 62, cha: 50 },
-    level: 10, exp: 0, loyalty: 0, unitType: 'infantry', skills: ['lianhuanzhan', 'jiasushu', 'bingdongshu'], homeCity: 'shouchun',
+    level: 10, exp: 0, loyalty: 0, unitType: 'infantry', skills: ['lianhuanzhan', 'jiasushu', 'bingdongshu'], homeCity: 'langya',
     portrait: { hair: 'bun', face: 'long', armor: 'medium', color: '#6a6a8a' }
   },
   {
@@ -1235,7 +1235,7 @@ const generals = [
   {
     id: 'chen_deng', name: '陈登', faction: 'none',
     stats: { war: 52, int: 82, lead: 68, pol: 78, cha: 65 },
-    level: 10, exp: 0, loyalty: 0, unitType: 'archer', skills: ['bingdongshu', 'shuilongjuan', 'gongjiqianghua'], homeCity: 'xiapi',
+    level: 10, exp: 0, loyalty: 0, unitType: 'archer', skills: ['bingdongshu', 'shuilongjuan', 'gongjiqianghua'], homeCity: 'guangling',
     portrait: { hair: 'bun', face: 'thin', armor: 'light', color: '#808080' }
   },
   {
@@ -1259,13 +1259,13 @@ const generals = [
   {
     id: 'zhu_jun', name: '朱儁', faction: 'none',
     stats: { war: 72, int: 68, lead: 78, pol: 62, cha: 65 },
-    level: 12, exp: 0, loyalty: 0, unitType: 'infantry', skills: ['lianhuanzhan', 'jiasushu', 'bingdongshu'], homeCity: 'luoyang',
+    level: 12, exp: 0, loyalty: 0, unitType: 'infantry', skills: ['lianhuanzhan', 'jiasushu', 'bingdongshu'], homeCity: 'kuaiji',
     portrait: { hair: 'short', face: 'long', armor: 'heavy', color: '#8a8a6a' }
   },
   {
     id: 'han_xuan', name: '韩玄', faction: 'none',
     stats: { war: 32, int: 42, lead: 38, pol: 52, cha: 35 },
-    level: 7, exp: 0, loyalty: 0, unitType: 'infantry', skills: ['lianhuanzhan', 'jiasushu', 'bingdongshu'], homeCity: 'changsha',
+    level: 7, exp: 0, loyalty: 0, unitType: 'infantry', skills: ['lianhuanzhan', 'jiasushu', 'bingdongshu'], homeCity: 'lingling',
     portrait: { hair: 'bun', face: 'round', armor: 'light', color: '#808080' }
   },
   {
@@ -1835,7 +1835,7 @@ const generals = [
   {
     id: 'zhao_ang', name: '赵昂', faction: 'none',
     stats: { war: 65, int: 68, lead: 65, pol: 72, cha: 62 },
-    level: 10, exp: 0, loyalty: 0, unitType: 'spear', skills: ['xuanfengzhan', 'fangyuqianghua', 'huifushu'], homeCity: 'tianshui',
+    level: 10, exp: 0, loyalty: 0, unitType: 'spear', skills: ['xuanfengzhan', 'fangyuqianghua', 'huifushu'], homeCity: 'jincheng',
     portrait: { hair: 'bun', face: 'long', armor: 'medium', color: '#8a8a7a' }
   },
   {
@@ -1853,25 +1853,25 @@ const generals = [
   {
     id: 'chen_tai', name: '陈泰', faction: 'none',
     stats: { war: 72, int: 82, lead: 80, pol: 75, cha: 68 },
-    level: 12, exp: 0, loyalty: 0, unitType: 'infantry', skills: ['luolei', 'duwu', 'jiasushu'], homeCity: 'tianshui',
+    level: 12, exp: 0, loyalty: 0, unitType: 'infantry', skills: ['luolei', 'duwu', 'jiasushu'], homeCity: 'yingchuan',
     portrait: { hair: 'bun', face: 'long', armor: 'medium', color: '#7a8a8a' }
   },
   {
     id: 'guanqiu_jian', name: '毌丘俭', faction: 'none',
     stats: { war: 78, int: 75, lead: 82, pol: 68, cha: 65 },
-    level: 12, exp: 0, loyalty: 0, unitType: 'infantry', skills: ['menghuchong', 'luolei', 'guwu'], homeCity: 'shouchun',
+    level: 12, exp: 0, loyalty: 0, unitType: 'infantry', skills: ['menghuchong', 'luolei', 'guwu'], homeCity: 'taiyuan',
     portrait: { hair: 'short', face: 'square', armor: 'heavy', color: '#8a8a7a' }
   },
   {
     id: 'wen_qin', name: '文钦', faction: 'none',
     stats: { war: 82, int: 48, lead: 72, pol: 38, cha: 50 },
-    level: 11, exp: 0, loyalty: 0, unitType: 'cavalry', skills: ['xuanfengzhan', 'leishenji', 'fangyuqianghua'], homeCity: 'shouchun',
+    level: 11, exp: 0, loyalty: 0, unitType: 'cavalry', skills: ['xuanfengzhan', 'leishenji', 'fangyuqianghua'], homeCity: 'runan',
     portrait: { hair: 'short', face: 'square', armor: 'heavy', color: '#7a8a7a' }
   },
   {
     id: 'zu_mao', name: '祖茂', faction: 'none',
     stats: { war: 72, int: 38, lead: 62, pol: 28, cha: 45 },
-    level: 9, exp: 0, loyalty: 0, unitType: 'cavalry', skills: ['xuanfengzhan', 'leishenji', 'fangyuqianghua'], homeCity: 'chaisang',
+    level: 9, exp: 0, loyalty: 0, unitType: 'cavalry', skills: ['xuanfengzhan', 'leishenji', 'fangyuqianghua'], homeCity: 'nanjun',
     portrait: { hair: 'short', face: 'round', armor: 'medium', color: '#6a7a6a' }
   },
   {
@@ -1895,7 +1895,7 @@ const generals = [
   {
     id: 'guan_xing', name: '关兴', faction: 'none',
     stats: { war: 85, int: 58, lead: 78, pol: 42, cha: 70 },
-    level: 11, exp: 0, loyalty: 0, unitType: 'cavalry', skills: ['xuanfengzhan', 'leishenji', 'fangyuqianghua'], homeCity: 'chengdu',
+    level: 11, exp: 0, loyalty: 0, unitType: 'cavalry', skills: ['xuanfengzhan', 'leishenji', 'fangyuqianghua'], homeCity: 'zitong',
     portrait: { hair: 'short', face: 'long', armor: 'heavy', color: '#4a8a4a' }
   },
   {
@@ -1919,7 +1919,7 @@ const generals = [
   {
     id: 'hua_tuo', name: '华佗', faction: 'none',
     stats: { war: 15, int: 95, lead: 42, pol: 85, cha: 92 },
-    level: 12, exp: 0, loyalty: 0, unitType: 'archer', skills: ['yunshi', 'dilie', 'fangyuqianghua'], homeCity: 'xuchang',
+    level: 12, exp: 0, loyalty: 0, unitType: 'archer', skills: ['yunshi', 'dilie', 'fangyuqianghua'], homeCity: 'chenliu',
     portrait: { hair: 'bun', face: 'thin', armor: 'robe', color: '#9a9a9a' }
   },
   {
@@ -1937,7 +1937,7 @@ const generals = [
   {
     id: 'lu_zhi', name: '卢植', faction: 'none',
     stats: { war: 65, int: 85, lead: 75, pol: 88, cha: 82 },
-    level: 14, exp: 0, loyalty: 0, unitType: 'infantry', skills: ['duwu', 'huifushu', 'huichunshu'], homeCity: 'luoyang',
+    level: 14, exp: 0, loyalty: 0, unitType: 'infantry', skills: ['duwu', 'huifushu', 'huichunshu'], homeCity: 'beiping',
     portrait: { hair: 'bun', face: 'long', armor: 'medium', color: '#8a8a7a' }
   },
   {
@@ -1949,19 +1949,19 @@ const generals = [
   {
     id: 'pan_jun', name: '潘濬', faction: 'none',
     stats: { war: 55, int: 75, lead: 65, pol: 78, cha: 68 },
-    level: 11, exp: 0, loyalty: 0, unitType: 'archer', skills: ['huifushu', 'huoji', 'huichunshu'], homeCity: 'jiangling',
+    level: 11, exp: 0, loyalty: 0, unitType: 'archer', skills: ['huifushu', 'huoji', 'huichunshu'], homeCity: 'wuling',
     portrait: { hair: 'bun', face: 'long', armor: 'medium', color: '#8a8a9a' }
   },
   {
     id: 'luo_tong', name: '骆统', faction: 'none',
     stats: { war: 50, int: 80, lead: 62, pol: 82, cha: 75 },
-    level: 10, exp: 0, loyalty: 0, unitType: 'archer', skills: ['bingdongshu', 'shuilongjuan', 'gongjiqianghua'], homeCity: 'jianye',
+    level: 10, exp: 0, loyalty: 0, unitType: 'archer', skills: ['bingdongshu', 'shuilongjuan', 'gongjiqianghua'], homeCity: 'poyang',
     portrait: { hair: 'bun', face: 'thin', armor: 'robe', color: '#9a8a8a' }
   },
   {
     id: 'xu_miao', name: '徐邈', faction: 'none',
     stats: { war: 38, int: 78, lead: 58, pol: 82, cha: 72 },
-    level: 10, exp: 0, loyalty: 0, unitType: 'archer', skills: ['huifushu', 'huoji', 'huichunshu'], homeCity: 'wuwei',
+    level: 10, exp: 0, loyalty: 0, unitType: 'archer', skills: ['huifushu', 'huoji', 'huichunshu'], homeCity: 'youbeiping',
     portrait: { hair: 'bun', face: 'thin', armor: 'robe', color: '#8a9a9a' }
   },
   {
@@ -1973,7 +1973,7 @@ const generals = [
   {
     id: 'bo_fu', name: '伯符', faction: 'none',
     stats: { war: 88, int: 58, lead: 80, pol: 48, cha: 75 },
-    level: 12, exp: 0, loyalty: 0, unitType: 'cavalry', skills: ['lianhuanzhan', 'longjuanfeng', 'jiasushu'], homeCity: 'chaisang',
+    level: 12, exp: 0, loyalty: 0, unitType: 'cavalry', skills: ['lianhuanzhan', 'longjuanfeng', 'jiasushu'], homeCity: 'kuaiji',
     portrait: { hair: 'short', face: 'square', armor: 'heavy', color: '#cc4422' }
   },
   {
@@ -1985,13 +1985,13 @@ const generals = [
   {
     id: 'zhang_liang2', name: '张梁', faction: 'none',
     stats: { war: 78, int: 62, lead: 72, pol: 55, cha: 68 },
-    level: 12, exp: 0, loyalty: 0, unitType: 'infantry', skills: ['xuanfengzhan', 'leishenji', 'fangyuqianghua'], homeCity: 'yecheng',
+    level: 12, exp: 0, loyalty: 0, unitType: 'infantry', skills: ['xuanfengzhan', 'leishenji', 'fangyuqianghua'], homeCity: 'henei',
     portrait: { hair: 'long', face: 'square', armor: 'medium', color: '#5a5a8a' }
   },
   {
     id: 'he_jin', name: '何进', faction: 'none',
     stats: { war: 35, int: 52, lead: 55, pol: 78, cha: 65 },
-    level: 10, exp: 0, loyalty: 0, unitType: 'archer', skills: ['menghuchong', 'huichunshu', 'luoshi'], homeCity: 'luoyang',
+    level: 10, exp: 0, loyalty: 0, unitType: 'archer', skills: ['menghuchong', 'huichunshu', 'luoshi'], homeCity: 'wancheng',
     portrait: { hair: 'bun', face: 'round', armor: 'robe', color: '#9a9a6a' }
   },
   {
@@ -2009,13 +2009,13 @@ const generals = [
   {
     id: 'shi_huan', name: '是仪', faction: 'none',
     stats: { war: 22, int: 78, lead: 50, pol: 85, cha: 75 },
-    level: 10, exp: 0, loyalty: 0, unitType: 'archer', skills: ['luolei', 'duwu', 'jiasushu'], homeCity: 'jianye',
+    level: 10, exp: 0, loyalty: 0, unitType: 'archer', skills: ['luolei', 'duwu', 'jiasushu'], homeCity: 'beihai',
     portrait: { hair: 'bun', face: 'thin', armor: 'robe', color: '#8a9a8a' }
   },
   {
     id: 'liu_xie', name: '刘协', faction: 'none',
     stats: { war: 12, int: 55, lead: 32, pol: 70, cha: 75 },
-    level: 8, exp: 0, loyalty: 0, unitType: 'archer', skills: ['menghuchong', 'huichunshu', 'luoshi'], homeCity: 'luoyang',
+    level: 8, exp: 0, loyalty: 0, unitType: 'archer', skills: ['menghuchong', 'huichunshu', 'luoshi'], homeCity: 'hongnong',
     portrait: { hair: 'bun', face: 'thin', armor: 'robe', color: '#c8a850' }
   },
   {
@@ -2081,7 +2081,7 @@ const generals = [
   {
     id: 'wu_anguo', name: '武安国', faction: 'none',
     stats: { war: 80, int: 18, lead: 58, pol: 15, cha: 35 },
-    level: 9, exp: 0, loyalty: 0, unitType: 'spear', skills: ['xuanfengzhan', 'leishenji', 'fangyuqianghua'], homeCity: 'luoyang',
+    level: 9, exp: 0, loyalty: 0, unitType: 'spear', skills: ['xuanfengzhan', 'leishenji', 'fangyuqianghua'], homeCity: 'langya',
     portrait: { hair: 'short', face: 'square', armor: 'heavy', color: '#7a8a5a' }
   },
   {
@@ -2105,7 +2105,7 @@ const generals = [
   {
     id: 'wang_shuang', name: '王双', faction: 'none',
     stats: { war: 88, int: 28, lead: 68, pol: 22, cha: 38 },
-    level: 11, exp: 0, loyalty: 0, unitType: 'spear', skills: ['liehuozhan', 'pojunxing', 'gongjiqianghua'], homeCity: 'tianshui',
+    level: 11, exp: 0, loyalty: 0, unitType: 'spear', skills: ['liehuozhan', 'pojunxing', 'gongjiqianghua'], homeCity: 'anding',
     portrait: { hair: 'short', face: 'square', armor: 'heavy', color: '#7a8a7a' }
   },
   {
@@ -2129,13 +2129,13 @@ const generals = [
   {
     id: 'zhang_song', name: '张松', faction: 'none',
     stats: { war: 12, int: 88, lead: 40, pol: 85, cha: 30 },
-    level: 10, exp: 0, loyalty: 0, unitType: 'archer', skills: ['huifushu', 'huoji', 'huichunshu'], homeCity: 'chengdu',
+    level: 10, exp: 0, loyalty: 0, unitType: 'archer', skills: ['huifushu', 'huoji', 'huichunshu'], homeCity: 'jiangzhou',
     portrait: { hair: 'bun', face: 'round', armor: 'robe', color: '#7a9a7a' }
   },
   {
     id: 'meng_da', name: '孟达', faction: 'none',
     stats: { war: 65, int: 72, lead: 65, pol: 68, cha: 55 },
-    level: 10, exp: 0, loyalty: 0, unitType: 'archer', skills: ['xuanfengzhan', 'fangyuqianghua', 'huifushu'], homeCity: 'shangyong',
+    level: 10, exp: 0, loyalty: 0, unitType: 'archer', skills: ['xuanfengzhan', 'fangyuqianghua', 'huifushu'], homeCity: 'xinye',
     portrait: { hair: 'bun', face: 'long', armor: 'medium', color: '#8a8a6a' }
   },
   {
@@ -2153,7 +2153,7 @@ const generals = [
   {
     id: 'hao_zhao', name: '郝昭', faction: 'none',
     stats: { war: 82, int: 68, lead: 80, pol: 55, cha: 58 },
-    level: 12, exp: 0, loyalty: 0, unitType: 'spear', skills: ['liehuozhan', 'pojunxing', 'gongjiqianghua'], homeCity: 'tianshui',
+    level: 12, exp: 0, loyalty: 0, unitType: 'spear', skills: ['liehuozhan', 'pojunxing', 'gongjiqianghua'], homeCity: 'shangdang',
     portrait: { hair: 'short', face: 'square', armor: 'heavy', color: '#7a8a8a' }
   },
 

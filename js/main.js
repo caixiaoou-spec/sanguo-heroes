@@ -97,8 +97,12 @@ class Game {
         this.lastTime = timestamp;
 
         if (this.currentScene) {
-            this.currentScene.update(dt);
-            this.currentScene.render();
+            try {
+                this.currentScene.update(dt);
+                this.currentScene.render();
+            } catch (e) {
+                console.error('[GameLoop] Exception caught:', e);
+            }
         }
 
         requestAnimationFrame(t => this.loop(t));

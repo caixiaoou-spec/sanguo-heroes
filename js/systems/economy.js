@@ -114,14 +114,33 @@ export default class EconomySystem {
         return { success: true, msg: `征兵 ${amount} 人` };
     }
 
+    // Derive search cap from city population
+    static _searchCap(city) {
+        const pop = city.population;
+        if (pop >= 70000) return 5;
+        if (pop >= 50000) return 4;
+        if (pop >= 35000) return 3;
+        if (pop >= 25000) return 2;
+        return 1;
+    }
+
     // Search for unaffiliated generals
     static search(gameState, cityId) {
         const city = gameState.getCity(cityId);
         if (!city) return { success: false, msg: '城池不存在' };
 
         const generals = gameState.getGeneralsInCity(cityId);
-        const bestCha = generals.reduce((best, g) => g.cha > (best?.cha || 0) ? g : best, null);
+        const bestCha = generals.reduce((best, g) => (g.stats.cha > (best?.stats?.cha || 0) ? g : best), null);
         if (!bestCha) return { success: false, msg: '城中无武将搜索' };
+
+        // Check city search cap (based on population)
+        const cap = EconomySystem._searchCap(city);
+        const alreadyFound = gameState.generals.filter(
+            g => g.homeCity === cityId && g.faction !== 'none' && g.status !== 'dead'
+        ).length;
+        if (alreadyFound >= cap) {
+            return { success: false, msg: '此处已无在野贤才' };
+        }
 
         // Only find unaffiliated generals whose homeCity matches this city
         const localPool = gameState.getUnaffiliatedGenerals().filter(g => g.homeCity === cityId);
@@ -130,7 +149,8 @@ export default class EconomySystem {
         }
 
         // Chance based on charisma
-        const chance = 0.3 + bestCha.cha / 200;
+        const cha = bestCha.stats.cha;
+        const chance = 0.5 + cha / 200;
         if (Math.random() > chance) {
             return { success: false, msg: '搜索未果，下次再试' };
         }
@@ -139,7 +159,7 @@ export default class EconomySystem {
         const found = localPool[Math.floor(Math.random() * localPool.length)];
 
         // Try to recruit based on charisma
-        const recruitChance = 0.4 + bestCha.cha / 150;
+        const recruitChance = 0.6 + cha / 150;
         if (Math.random() < recruitChance) {
             found.faction = city.owner;
             found.city = cityId;

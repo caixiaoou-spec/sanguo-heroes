@@ -139,10 +139,10 @@ export default class BattleScene {
         const flagPosL = [-150, -220, -310];
         const flagPosR = [1350, 1420, 1510];
         for (const fx of flagPosL) {
-            this.battleFlags.push({ x: fx, side: 'left', color: factionL.color || '#4488cc', waveOffset: Math.random() * Math.PI * 2 });
+            this.battleFlags.push({ x: fx, side: 'left', color: (factionL && factionL.color) || '#4488cc', waveOffset: Math.random() * Math.PI * 2 });
         }
         for (const fx of flagPosR) {
-            this.battleFlags.push({ x: fx, side: 'right', color: factionR.color || '#cc4444', waveOffset: Math.random() * Math.PI * 2 });
+            this.battleFlags.push({ x: fx, side: 'right', color: (factionR && factionR.color) || '#cc4444', waveOffset: Math.random() * Math.PI * 2 });
         }
 
         // Play battle BGM

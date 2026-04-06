@@ -6,7 +6,7 @@ const FACTIONS_DATA = [
         // 5城：中原核心（许昌+陈留+洛阳+颍川+宛城）
         cities: ['xuchang', 'chenliu', 'luoyang', 'yingchuan', 'wancheng'],
         gold: 55000, food: 85000, fame: 85,
-        generals: ['cao_cao', 'xiahou_dun', 'xiahou_yuan', 'cao_ren', 'cao_hong', 'xun_yu', 'xun_you', 'guo_jia', 'cheng_yu', 'yu_jin', 'yue_jin', 'li_dian', 'dian_wei', 'xu_chu', 'zhang_liao_cc', 'jia_xu', 'man_chong', 'cao_zhang', 'cao_pi', 'xu_huang', 'zhang_he_cc', 'niu_jin', 'zang_ba', 'wang_lang', 'chen_qun', 'hua_xin', 'cao_zhen', 'cao_xiu', 'wang_chang', 'guo_huai_cc', 'zhang_liao', 'xin_pi', 'deng_ai', 'zhong_hui', 'sima_yi_cc']
+        generals: ['cao_cao', 'xiahou_dun', 'xiahou_yuan', 'cao_ren', 'cao_hong', 'xun_yu', 'xun_you', 'guo_jia', 'cheng_yu', 'yu_jin', 'yue_jin', 'li_dian', 'dian_wei', 'xu_chu', 'zhang_liao_cc', 'jia_xu', 'man_chong', 'cao_zhang', 'cao_pi', 'xu_huang', 'zhang_he_cc', 'niu_jin', 'zang_ba', 'wang_lang', 'chen_qun', 'hua_xin', 'cao_zhen', 'cao_xiu', 'wang_chang', 'guo_huai_cc', 'xin_pi', 'deng_ai', 'zhong_hui', 'sima_yi_cc']
     },
     {
         id: 'liu_bei', name: '刘备', color: '#44aa44', colorLight: '#66cc66',
@@ -30,7 +30,7 @@ const FACTIONS_DATA = [
         // 2城：青兖交界（平原+濮阳）
         cities: ['pingyuan', 'puyang'],
         gold: 42000, food: 68000, fame: 70,
-        generals: ['yuan_shao', 'yan_liang', 'wen_chou', 'zhang_he_ys', 'gao_lan', 'ju_shou', 'tian_feng', 'shen_pei', 'chunyu_qiong', 'feng_ji', 'xin_ping', 'yuan_tan', 'yuan_shang', 'yuan_xi', 'gao_gan', 'qu_yi', 'guo_tu', 'zhang_he_ys2', 'han_meng']
+        generals: ['yuan_shao', 'yan_liang', 'wen_chou', 'gao_lan', 'ju_shou', 'tian_feng', 'shen_pei', 'chunyu_qiong', 'feng_ji', 'xin_ping', 'yuan_tan', 'yuan_shang', 'yuan_xi', 'gao_gan', 'qu_yi', 'guo_tu', 'zhang_he_ys2', 'han_meng']
     },
     {
         id: 'lv_bu', name: '吕布', color: '#aa44aa', colorLight: '#cc66cc',
@@ -62,7 +62,7 @@ const FACTIONS_DATA = [
         // 1城：庐江（广陵给陶谦）
         cities: ['lujiang'],
         gold: 25000, food: 40000, fame: 70,
-        generals: ['sun_ce', 'jiang_qin', 'chen_wu', 'han_dang', 'zhu_zhi', 'lv_fan', 'jiang_qin2', 'ling_cao', 'xu_kun', 'sun_ben']
+        generals: ['sun_ce', 'jiang_qin', 'chen_wu', 'han_dang', 'zhu_zhi', 'lv_fan', 'ling_cao', 'xu_kun', 'sun_ben']
     },
     {
         id: 'xiang_yu', name: '项羽', color: '#8b0000', colorLight: '#b22222',
@@ -144,7 +144,7 @@ const FACTIONS_DATA = [
         // 2城：北海+济北
         cities: ['beihai', 'jibei'],
         gold: 22000, food: 35000, fame: 62,
-        generals: ['kong_rong', 'tai_shici_kr', 'wang_xiu', 'zong_bao', 'liu_kong']
+        generals: ['kong_rong', 'wang_xiu', 'zong_bao', 'liu_kong']
     },
     {
         id: 'zhang_yan', name: '张燕', color: '#778866', colorLight: '#99aa88',
@@ -192,7 +192,7 @@ const FACTIONS_DATA = [
         // 2城：武陵+桂阳
         cities: ['wuling', 'guiyang'],
         gold: 16000, food: 28000, fame: 35,
-        generals: ['yan_baihu', 'yan_yu', 'wang_lang_ybh', 'dong_ci']
+        generals: ['yan_baihu', 'yan_yu', 'dong_ci']
     },
     {
         id: 'liu_du', name: '刘度', color: '#aa66aa', colorLight: '#cc88cc',

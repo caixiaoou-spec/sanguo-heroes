@@ -646,6 +646,10 @@ export default class CombatSystem {
                         gen.originalFaction = gen.faction;
                         gen.faction = 'none';
                         gen.status = 'idle';
+                        // Remove from city list to prevent being selected as attacker
+                        const oldCity = gs.getCity(gen.city);
+                        if (oldCity) oldCity.generals = oldCity.generals.filter(gid => gid !== gen.id);
+                        gen.city = null;
                     }
                 }
             } else {
