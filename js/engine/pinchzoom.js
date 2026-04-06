@@ -61,8 +61,15 @@ export default class PinchZoom {
         }
 
         // 绝对偏移：_tx = 触碰时的_tx + 手指移动距离，不累加误差
-        const newTx = this._panStartTx + (cx - this._panStartClientX);
-        const newTy = this._panStartTy + (cy - this._panStartClientY);
+        // 竖屏时容器旋转 -90°：container X = portrait -Y，container Y = portrait X
+        let newTx, newTy;
+        if (window.innerHeight > window.innerWidth) {
+            newTx = this._panStartTx - (cy - this._panStartClientY);
+            newTy = this._panStartTy + (cx - this._panStartClientX);
+        } else {
+            newTx = this._panStartTx + (cx - this._panStartClientX);
+            newTy = this._panStartTy + (cy - this._panStartClientY);
+        }
 
         const maxTx = (window.innerWidth  * (this.zoom - 1)) / 2;
         const maxTy = (window.innerHeight * (this.zoom - 1)) / 2;
@@ -82,8 +89,11 @@ export default class PinchZoom {
     }
 
     _clampTranslation() {
-        const maxTx = (window.innerWidth  * (this.zoom - 1)) / 2;
-        const maxTy = (window.innerHeight * (this.zoom - 1)) / 2;
+        // Use landscape dimensions regardless of device orientation
+        const lw = Math.max(window.innerWidth, window.innerHeight);
+        const lh = Math.min(window.innerWidth, window.innerHeight);
+        const maxTx = lw * (this.zoom - 1) / 2;
+        const maxTy = lh * (this.zoom - 1) / 2;
         this._tx = Math.max(-maxTx, Math.min(maxTx, this._tx));
         this._ty = Math.max(-maxTy, Math.min(maxTy, this._ty));
     }

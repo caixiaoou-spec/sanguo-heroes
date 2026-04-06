@@ -12,10 +12,33 @@ export default class Renderer {
         canvas.height = this.height * this.dpr;
         this.ctx.scale(this.dpr, this.dpr);
 
-        // Stretch canvas to fill the full viewport — no letterbox bars
+        // Stretch canvas to fill viewport; in portrait, rotate container -90° so game shows landscape
+        const container = canvas.parentElement;
         const fitCanvas = () => {
-            canvas.style.width  = window.innerWidth  + 'px';
-            canvas.style.height = window.innerHeight + 'px';
+            const W = window.innerWidth;
+            const H = window.innerHeight;
+            if (H > W) {
+                // Portrait: container becomes landscape-sized and rotated -90° CCW
+                container.style.left   = (W - H) / 2 + 'px';
+                container.style.top    = (H - W) / 2 + 'px';
+                container.style.right  = 'auto';
+                container.style.bottom = 'auto';
+                container.style.width  = H + 'px';
+                container.style.height = W + 'px';
+                container.style.transform = 'rotate(-90deg)';
+                canvas.style.width  = H + 'px';
+                canvas.style.height = W + 'px';
+            } else {
+                container.style.left   = '0';
+                container.style.top    = '0';
+                container.style.right  = '0';
+                container.style.bottom = '0';
+                container.style.width  = '';
+                container.style.height = '';
+                container.style.transform = '';
+                canvas.style.width  = W + 'px';
+                canvas.style.height = H + 'px';
+            }
         };
         fitCanvas();
         window.addEventListener('resize', fitCanvas);

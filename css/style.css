@@ -32,35 +32,6 @@ body {
     transform-origin: center center;
 }
 
-/* Portrait orientation warning */
-#rotate-prompt {
-    display: none;
-    position: fixed;
-    inset: 0;
-    z-index: 9999;
-    background: #000;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 20px;
-}
-#rotate-prompt .rotate-icon {
-    font-size: 72px;
-    color: #c8a850;
-    animation: rotatePulse 1.5s ease-in-out infinite;
-}
-#rotate-prompt .rotate-text {
-    font-size: 22px;
-    color: #ffe080;
-    letter-spacing: 4px;
-}
-@keyframes rotatePulse {
-    0%, 100% { transform: rotate(0deg); opacity: 1; }
-    50% { transform: rotate(90deg); opacity: 0.6; }
-}
-@media (orientation: portrait) {
-    #rotate-prompt { display: flex; }
-}
 
 #ui-layer {
     position: absolute;

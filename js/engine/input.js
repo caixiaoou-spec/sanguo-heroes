@@ -26,9 +26,18 @@ export default class InputManager {
 
     _getCanvasCoords(clientX, clientY) {
         const rect = this.canvas.getBoundingClientRect();
+        const fx = (clientX - rect.left) / rect.width;
+        const fy = (clientY - rect.top) / rect.height;
+        if (window.innerHeight > window.innerWidth) {
+            // Container rotated -90° CCW: portrait x→logical y, portrait y(inverted)→logical x
+            return {
+                x: (1 - fy) * this.logicalWidth,
+                y: fx * this.logicalHeight
+            };
+        }
         return {
-            x: (clientX - rect.left) / rect.width * this.logicalWidth,
-            y: (clientY - rect.top) / rect.height * this.logicalHeight
+            x: fx * this.logicalWidth,
+            y: fy * this.logicalHeight
         };
     }
 
@@ -96,6 +105,7 @@ export default class InputManager {
             if (e.touches.length === 2) {
                 // Two-finger gesture: cancel single-touch state, prepare for scroll/pinch
                 this._twoFingerActive = true;
+                this._twoFingerLastX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
                 this._twoFingerLastY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
                 this._twoFingerLastDist = Math.hypot(
                     e.touches[0].clientX - e.touches[1].clientX,
@@ -128,9 +138,9 @@ export default class InputManager {
                 const t0 = e.touches[0];
                 const t1 = e.touches.length >= 2 ? e.touches[1] : e.changedTouches[0];
                 const dist = Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY);
+                const midX = (t0.clientX + t1.clientX) / 2;
                 const midY = (t0.clientY + t1.clientY) / 2;
                 const dd = dist - this._twoFingerLastDist;   // positive = fingers spreading apart
-                const dy = this._twoFingerLastY - midY;      // positive = fingers moving up
 
                 // Pinch = fingers clearly spreading/closing; scroll = fingers moving together
                 if (Math.abs(dd) > 3) {
@@ -139,10 +149,15 @@ export default class InputManager {
                 } else {
                     this.isPinching = false;
                     this.pinchDelta = 0;
-                    // Two-finger vertical swipe → scroll delta (for panel lists)
-                    this.scrollDelta += dy * 2;
+                    // Two-finger swipe → scroll delta (portrait: use horizontal swipe)
+                    if (window.innerHeight > window.innerWidth) {
+                        this.scrollDelta += (this._twoFingerLastX - midX) * 2;
+                    } else {
+                        this.scrollDelta += (this._twoFingerLastY - midY) * 2;
+                    }
                 }
                 this._twoFingerLastDist = dist;
+                this._twoFingerLastX = midX;
                 this._twoFingerLastY = midY;
                 return;
             }

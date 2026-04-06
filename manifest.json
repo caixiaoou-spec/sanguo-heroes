@@ -4,7 +4,7 @@
     "description": "三国英雄传——蔡博尧版",
     "start_url": "./index.html",
     "display": "fullscreen",
-    "orientation": "landscape",
+    "orientation": "any",
     "background_color": "#0d1a0d",
     "theme_color": "#0d1a0d",
     "icons": [
