@@ -5,7 +5,7 @@
 }
 
 body {
-    background: #000;
+    background: #0d1a0d;
     overflow: hidden;
     font-family: 'SimHei', 'Microsoft YaHei', 'PingFang SC', sans-serif;
     user-select: none;
@@ -20,7 +20,8 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #000;
+    background: #0d1a0d;
+    transform-origin: center center;
 }
 
 #game-canvas {

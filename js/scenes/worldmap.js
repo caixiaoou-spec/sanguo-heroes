@@ -347,6 +347,12 @@ export default class WorldMapScene {
         if (input.isDragging) return;
         const click = input.getClick();
         if (click) {
+            // Check top bar fullscreen button
+            if (click.y <= 42 && click.x >= r.width - 42) {
+                this.game.requestFullscreen();
+                return;
+            }
+
             // Check bottom HUD buttons
             if (click.y > r.height - 50) {
                 this._handleBottomClick(click);

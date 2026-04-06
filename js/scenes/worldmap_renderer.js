@@ -504,9 +504,19 @@ export class WorldMapRenderer {
         r.fillRect(0, r.height - 50, r.width, 50, 'rgba(30,15,5,0.92)');
         r.drawLine(0, r.height - 50, r.width, r.height - 50, '#c8a850', 1);
 
-        // Bottom buttons
+        // Mouse position for hover detection
         const mx = this._s.input.mouse.x;
         const my = this._s.input.mouse.y;
+
+        // Fullscreen toggle button (top-right of top bar)
+        const fsIcon = document.fullscreenElement ? '⊡' : '⛶';
+        const fsBtnHover = mx >= r.width - 42 && mx <= r.width && my >= 4 && my <= 38;
+        r.drawText(fsIcon, r.width - 21, 21, {
+            color: fsBtnHover ? '#ffe080' : '#c8a850',
+            size: 20,
+            align: 'center',
+            baseline: 'middle'
+        });
 
         const leftBtns = [
             { text: '武将', x: 15, w: 80 },

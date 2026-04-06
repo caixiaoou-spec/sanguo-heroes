@@ -12,6 +12,9 @@ export default class InputManager {
         this.touchStart = null;
         this._twoFingerActive = false;
         this._twoFingerLastY = 0;
+        this._twoFingerLastDist = 0;
+        this.isPinching = false;
+        this.pinchDelta = 0;
 
         // 逻辑分辨率，不依赖canvas.width（因为canvas.width含DPR）
         this.logicalWidth = 1280;
@@ -86,9 +89,15 @@ export default class InputManager {
         this.canvas.addEventListener('touchstart', e => {
             e.preventDefault();
             if (e.touches.length === 2) {
-                // Two-finger gesture: cancel single-touch state, prepare for scroll
+                // Two-finger gesture: cancel single-touch state, prepare for scroll/pinch
                 this._twoFingerActive = true;
                 this._twoFingerLastY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                this._twoFingerLastDist = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                this.isPinching = false;
+                this.pinchDelta = 0;
                 this.mouse.down = false;
                 this.isDragging = false;
                 this.touchStart = null;
@@ -108,10 +117,24 @@ export default class InputManager {
         this.canvas.addEventListener('touchmove', e => {
             e.preventDefault();
             if (e.touches.length === 2 || this._twoFingerActive) {
-                // Two-finger vertical swipe → scroll delta (for panel lists)
-                const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-                const dy = this._twoFingerLastY - midY;
-                this.scrollDelta += dy * 2;
+                const t0 = e.touches[0];
+                const t1 = e.touches.length >= 2 ? e.touches[1] : e.changedTouches[0];
+                const dist = Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY);
+                const midY = (t0.clientY + t1.clientY) / 2;
+                const dd = dist - this._twoFingerLastDist;   // positive = fingers spreading apart
+                const dy = this._twoFingerLastY - midY;      // positive = fingers moving up
+
+                // Classify as pinch when distance change dominates movement
+                if (Math.abs(dd) > 4 && Math.abs(dd) > Math.abs(dy) * 0.4) {
+                    this.isPinching = true;
+                    this.pinchDelta = dd;
+                } else {
+                    this.isPinching = false;
+                    this.pinchDelta = 0;
+                    // Two-finger vertical swipe → scroll delta (for panel lists)
+                    this.scrollDelta += dy * 2;
+                }
+                this._twoFingerLastDist = dist;
                 this._twoFingerLastY = midY;
                 return;
             }
@@ -131,6 +154,8 @@ export default class InputManager {
         this.canvas.addEventListener('touchend', e => {
             if (this._twoFingerActive && e.touches.length < 2) {
                 this._twoFingerActive = false;
+                this.isPinching = false;
+                this.pinchDelta = 0;
                 return;
             }
             if (!this.isDragging && this.touchStart) {
