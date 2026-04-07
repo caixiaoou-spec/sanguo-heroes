@@ -68,7 +68,14 @@ export default class Renderer {
         };
         img.onerror = () => {
             this.portraitLoading.delete(generalId);
-            this.portraitFailed.add(generalId);
+            // 移动端网络慢时加载失败，3秒后重试，最多3次
+            const retries = (this._portraitRetries = this._portraitRetries || {});
+            retries[generalId] = (retries[generalId] || 0) + 1;
+            if (retries[generalId] <= 3) {
+                setTimeout(() => this.portraitLoading.delete(generalId), 3000);
+            } else {
+                this.portraitFailed.add(generalId);
+            }
         };
         return null;
     }
