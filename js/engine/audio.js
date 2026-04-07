@@ -120,47 +120,55 @@ export default class AudioManager {
     playBGM(type) {
         this.stopBGM();
         if (!this.audioCtx || this.muted) return;
-        this.resume();
         this.currentBGM = type;
 
-        if (this._bgmFileCache[type] === 'unavailable') {
-            this._playProceduralBGM(type);
-            return;
-        }
-
-        const audio = new Audio();
-        audio.loop = true;
-        audio.src = `assets/audio/bgm_${type}.mp3`;
-
-        const bgmBus = this.audioCtx.createGain();
-        bgmBus.gain.value = this.bgmVolume;
-        bgmBus.connect(this.audioCtx.destination);
-
-        let source;
-        try {
-            source = this.audioCtx.createMediaElementSource(audio);
-        } catch (e) {
-            this._bgmFileCache[type] = 'unavailable';
-            this._playProceduralBGM(type);
-            return;
-        }
-        source.connect(bgmBus);
-
-        this._activeBgmBus = bgmBus;
-        this._bgmAudioElement = audio;
-        this._bgmSourceNode = source;
-
-        audio.play().catch(() => {
-            // 只清理本次失败的资源，不调 stopBGM()（避免清掉 currentBGM 导致 fallback 失效）
-            if (this._bgmAudioElement === audio) this._bgmAudioElement = null;
-            if (this._bgmSourceNode === source) this._bgmSourceNode = null;
-            if (this._activeBgmBus === bgmBus) {
-                try { bgmBus.disconnect(); } catch (e) {}
-                this._activeBgmBus = null;
+        const doPlay = () => {
+            if (this.currentBGM !== type) return; // 已被打断
+            if (this._bgmFileCache[type] === 'unavailable') {
+                this._playProceduralBGM(type);
+                return;
             }
-            this._bgmFileCache[type] = 'unavailable';
-            if (this.currentBGM === type) this._playProceduralBGM(type);
-        });
+
+            const audio = new Audio();
+            audio.loop = true;
+            audio.src = `assets/audio/bgm_${type}.mp3`;
+
+            const bgmBus = this.audioCtx.createGain();
+            bgmBus.gain.value = this.bgmVolume;
+            bgmBus.connect(this.audioCtx.destination);
+            this._activeBgmBus = bgmBus;
+            this._bgmAudioElement = audio;
+
+            try {
+                const source = this.audioCtx.createMediaElementSource(audio);
+                source.connect(bgmBus);
+                this._bgmSourceNode = source;
+            } catch (e) {
+                // createMediaElementSource 失败时直接设置 volume 播放
+                audio.volume = this.bgmVolume;
+            }
+
+            audio.play().catch(() => {
+                if (this._bgmAudioElement === audio) this._bgmAudioElement = null;
+                if (this._bgmSourceNode) {
+                    try { this._bgmSourceNode.disconnect(); } catch (e) {}
+                    this._bgmSourceNode = null;
+                }
+                if (this._activeBgmBus === bgmBus) {
+                    try { bgmBus.disconnect(); } catch (e) {}
+                    this._activeBgmBus = null;
+                }
+                this._bgmFileCache[type] = 'unavailable';
+                if (this.currentBGM === type) this._playProceduralBGM(type);
+            });
+        };
+
+        // 确保 AudioContext 已 running 再播，避免信号走不通但 play() 却 resolve 了
+        if (this.audioCtx.state === 'suspended') {
+            this.audioCtx.resume().then(doPlay).catch(() => this._playProceduralBGM(type));
+        } else {
+            doPlay();
+        }
     }
 
     // Rich procedural BGM with multiple layers
