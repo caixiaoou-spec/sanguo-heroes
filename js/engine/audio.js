@@ -116,45 +116,11 @@ export default class AudioManager {
 
     // ==================== BGM System ====================
 
-    // Try to play an external audio file first, fall back to procedural
     playBGM(type) {
         this.stopBGM();
         if (!this.audioCtx || this.muted) return;
-        this.currentBGM = type;
-
-        // 所有路径都先确保 AudioContext 是 running（iOS 切 tab 后会 suspended）
-        const ensureRunning = this.audioCtx.state === 'suspended'
-            ? this.audioCtx.resume() : Promise.resolve();
-
-        ensureRunning.then(() => {
-            if (this.currentBGM !== type) return;
-
-            // 已缓存的 AudioBuffer 直接播
-            if (this._bgmFileCache[type] instanceof AudioBuffer) {
-                this._playBufferBGM(type, this._bgmFileCache[type]);
-                return;
-            }
-            if (this._bgmFileCache[type] === 'unavailable') {
-                this._playProceduralBGM(type);
-                return;
-            }
-
-            // 用 fetch + decodeAudioData 加载 MP3，完全走 Web Audio API
-            return fetch(`assets/audio/bgm_${type}.mp3`)
-                .then(r => { if (!r.ok) throw new Error('fetch failed'); return r.arrayBuffer(); })
-                .then(buf => Promise.race([
-                    new Promise((res, rej) => this.audioCtx.decodeAudioData(buf, res, rej)),
-                    new Promise((_, rej) => setTimeout(() => rej(new Error('decode timeout')), 20000))
-                ]))
-                .then(decoded => {
-                    if (this.currentBGM !== type) return;
-                    this._bgmFileCache[type] = decoded;
-                    this._playBufferBGM(type, decoded);
-                });
-        }).catch(() => {
-            this._bgmFileCache[type] = 'unavailable';
-            if (this.currentBGM === type) this._playProceduralBGM(type);
-        });
+        this.resume();
+        this._playProceduralBGM(type);
     }
 
     // 用 AudioBufferSourceNode 循环播放已解码的音频
@@ -647,9 +613,8 @@ export default class AudioManager {
             try { this._bgmSourceNode.disconnect(); } catch (e) {}
             this._bgmSourceNode = null;
         }
-        // 3. 断开BGM总线（先置零再断，兼容 Android 不立即生效的 disconnect）
+        // 3. 断开BGM总线
         if (this._activeBgmBus) {
-            try { this._activeBgmBus.gain.value = 0; } catch (e) {}
             try { this._activeBgmBus.disconnect(); } catch (e) {}
             this._activeBgmBus = null;
         }
