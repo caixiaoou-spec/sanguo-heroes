@@ -140,8 +140,8 @@ export default class AudioManager {
         ensureRunning.then(() => {
             if (this.currentBGM !== type) return;
             return fetch(`assets/audio/bgm_${type}.mp3`)
-                .then(r => r.arrayBuffer())
-                .then(buf => this.audioCtx.decodeAudioData(buf))
+                .then(r => { if (!r.ok) throw new Error('fetch failed'); return r.arrayBuffer(); })
+                .then(buf => new Promise((res, rej) => this.audioCtx.decodeAudioData(buf, res, rej)))
                 .then(decoded => {
                     if (this.currentBGM !== type) return;
                     this._bgmFileCache[type] = decoded;
