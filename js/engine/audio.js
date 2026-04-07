@@ -121,59 +121,39 @@ export default class AudioManager {
         this.stopBGM();
         if (!this.audioCtx || this.muted) return;
         this.resume();
+        this.currentBGM = type;
 
-        // Try external file: assets/audio/bgm_{type}.mp3 or .ogg
-        const filePath = `assets/audio/bgm_${type}`;
         if (this._bgmFileCache[type] === 'unavailable') {
             this._playProceduralBGM(type);
             return;
         }
 
-        // Try loading external audio file
         const audio = new Audio();
         audio.loop = true;
-        audio.volume = 0; // We'll route through Web Audio API
+        audio.volume = this.bgmVolume;
 
-        const tryLoad = (ext) => {
-            return new Promise((resolve) => {
-                const testAudio = new Audio();
-                testAudio.src = `${filePath}.${ext}`;
-                testAudio.oncanplaythrough = () => resolve(`${filePath}.${ext}`);
-                testAudio.onerror = () => resolve(null);
-                // Timeout after 500ms
-                setTimeout(() => resolve(null), 500);
-            });
+        let settled = false;
+
+        const onFail = () => {
+            if (settled) return;
+            settled = true;
+            this._bgmFileCache[type] = 'unavailable';
+            if (this.currentBGM === type) this._playProceduralBGM(type);
         };
 
-        Promise.race([
-            tryLoad('mp3').then(url => url || tryLoad('ogg')),
-            new Promise(resolve => setTimeout(() => resolve(null), 800))
-        ]).then(url => {
-            if (url && this.currentBGM === null) {
-                // External file found
-                audio.src = url;
-                const source = this.audioCtx.createMediaElementSource(audio);
-                const bgmBus = this.audioCtx.createGain();
-                bgmBus.gain.value = this.bgmVolume;
-                source.connect(bgmBus);
-                bgmBus.connect(this.audioCtx.destination);
-                this._activeBgmBus = bgmBus;
-                this._bgmAudioElement = audio;
-                this._bgmSourceNode = source;
-                this._bgmFileCache[type] = url;
-                audio.play().catch(() => {});
-                this.currentBGM = type;
-            } else {
-                this._bgmFileCache[type] = 'unavailable';
-                this._playProceduralBGM(type);
-            }
-        }).catch(() => {
-            this._bgmFileCache[type] = 'unavailable';
-            this._playProceduralBGM(type);
-        });
+        audio.addEventListener('canplay', () => {
+            if (settled || this.currentBGM !== type) return;
+            settled = true;
+            clearTimeout(timer);
+            this._bgmAudioElement = audio;
+            audio.play().catch(onFail);
+        }, { once: true });
 
-        // Mark as current immediately to prevent race conditions
-        this.currentBGM = type;
+        audio.addEventListener('error', onFail, { once: true });
+        const timer = setTimeout(onFail, 5000);
+
+        audio.src = `assets/audio/bgm_${type}.mp3`;
+        audio.load();
     }
 
     // Rich procedural BGM with multiple layers
