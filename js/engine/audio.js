@@ -122,53 +122,51 @@ export default class AudioManager {
         if (!this.audioCtx || this.muted) return;
         this.currentBGM = type;
 
-        const doPlay = () => {
-            if (this.currentBGM !== type) return; // 已被打断
-            if (this._bgmFileCache[type] === 'unavailable') {
-                this._playProceduralBGM(type);
-                return;
-            }
-
-            const audio = new Audio();
-            audio.loop = true;
-            audio.src = `assets/audio/bgm_${type}.mp3`;
-
-            const bgmBus = this.audioCtx.createGain();
-            bgmBus.gain.value = this.bgmVolume;
-            bgmBus.connect(this.audioCtx.destination);
-            this._activeBgmBus = bgmBus;
-            this._bgmAudioElement = audio;
-
-            try {
-                const source = this.audioCtx.createMediaElementSource(audio);
-                source.connect(bgmBus);
-                this._bgmSourceNode = source;
-            } catch (e) {
-                // createMediaElementSource 失败时直接设置 volume 播放
-                audio.volume = this.bgmVolume;
-            }
-
-            audio.play().catch(() => {
-                if (this._bgmAudioElement === audio) this._bgmAudioElement = null;
-                if (this._bgmSourceNode) {
-                    try { this._bgmSourceNode.disconnect(); } catch (e) {}
-                    this._bgmSourceNode = null;
-                }
-                if (this._activeBgmBus === bgmBus) {
-                    try { bgmBus.disconnect(); } catch (e) {}
-                    this._activeBgmBus = null;
-                }
-                this._bgmFileCache[type] = 'unavailable';
-                if (this.currentBGM === type) this._playProceduralBGM(type);
-            });
-        };
-
-        // 确保 AudioContext 已 running 再播，避免信号走不通但 play() 却 resolve 了
-        if (this.audioCtx.state === 'suspended') {
-            this.audioCtx.resume().then(doPlay).catch(() => this._playProceduralBGM(type));
-        } else {
-            doPlay();
+        // 已缓存的 AudioBuffer 直接播
+        if (this._bgmFileCache[type] instanceof AudioBuffer) {
+            this._playBufferBGM(type, this._bgmFileCache[type]);
+            return;
         }
+        if (this._bgmFileCache[type] === 'unavailable') {
+            this._playProceduralBGM(type);
+            return;
+        }
+
+        // 用 fetch + decodeAudioData 加载 MP3，完全走 Web Audio API
+        // 不依赖 HTMLAudioElement.play()，绕开 Android/WeChat autoplay 限制
+        const ensureRunning = this.audioCtx.state === 'suspended'
+            ? this.audioCtx.resume() : Promise.resolve();
+
+        ensureRunning.then(() => {
+            if (this.currentBGM !== type) return;
+            return fetch(`assets/audio/bgm_${type}.mp3`)
+                .then(r => r.arrayBuffer())
+                .then(buf => this.audioCtx.decodeAudioData(buf))
+                .then(decoded => {
+                    if (this.currentBGM !== type) return;
+                    this._bgmFileCache[type] = decoded;
+                    this._playBufferBGM(type, decoded);
+                });
+        }).catch(() => {
+            this._bgmFileCache[type] = 'unavailable';
+            if (this.currentBGM === type) this._playProceduralBGM(type);
+        });
+    }
+
+    // 用 AudioBufferSourceNode 循环播放已解码的音频
+    _playBufferBGM(type, buffer) {
+        const bgmBus = this.audioCtx.createGain();
+        bgmBus.gain.value = this.bgmVolume;
+        bgmBus.connect(this.audioCtx.destination);
+        this._activeBgmBus = bgmBus;
+
+        const source = this.audioCtx.createBufferSource();
+        source.buffer = buffer;
+        source.loop = true;
+        source.connect(bgmBus);
+        source.start(0);
+        this._bgmSourceNode = source;
+        this.currentBGM = type;
     }
 
     // Rich procedural BGM with multiple layers
@@ -641,6 +639,7 @@ export default class AudioManager {
             this._bgmAudioElement = null;
         }
         if (this._bgmSourceNode) {
+            try { this._bgmSourceNode.stop(); } catch (e) {}
             try { this._bgmSourceNode.disconnect(); } catch (e) {}
             this._bgmSourceNode = null;
         }
