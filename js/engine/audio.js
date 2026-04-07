@@ -643,7 +643,7 @@ export default class AudioManager {
         }
         if (this._bgmSourceNode) {
             try { this._bgmSourceNode.loop = false; } catch (e) {}
-            try { this._bgmSourceNode.stop(0); } catch (e) {}
+            try { this._bgmSourceNode.stop(); } catch (e) {}
             try { this._bgmSourceNode.disconnect(); } catch (e) {}
             this._bgmSourceNode = null;
         }
