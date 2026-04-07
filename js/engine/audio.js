@@ -642,12 +642,14 @@ export default class AudioManager {
             this._bgmAudioElement = null;
         }
         if (this._bgmSourceNode) {
-            try { this._bgmSourceNode.stop(); } catch (e) {}
+            try { this._bgmSourceNode.loop = false; } catch (e) {}
+            try { this._bgmSourceNode.stop(0); } catch (e) {}
             try { this._bgmSourceNode.disconnect(); } catch (e) {}
             this._bgmSourceNode = null;
         }
-        // 3. 断开BGM总线
+        // 3. 断开BGM总线（先置零再断，兼容 Android 不立即生效的 disconnect）
         if (this._activeBgmBus) {
+            try { this._activeBgmBus.gain.value = 0; } catch (e) {}
             try { this._activeBgmBus.disconnect(); } catch (e) {}
             this._activeBgmBus = null;
         }
