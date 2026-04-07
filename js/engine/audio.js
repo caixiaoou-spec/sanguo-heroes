@@ -122,23 +122,24 @@ export default class AudioManager {
         if (!this.audioCtx || this.muted) return;
         this.currentBGM = type;
 
-        // 已缓存的 AudioBuffer 直接播
-        if (this._bgmFileCache[type] instanceof AudioBuffer) {
-            this._playBufferBGM(type, this._bgmFileCache[type]);
-            return;
-        }
-        if (this._bgmFileCache[type] === 'unavailable') {
-            this._playProceduralBGM(type);
-            return;
-        }
-
-        // 用 fetch + decodeAudioData 加载 MP3，完全走 Web Audio API
-        // 不依赖 HTMLAudioElement.play()，绕开 Android/WeChat autoplay 限制
+        // 所有路径都先确保 AudioContext 是 running（iOS 切 tab 后会 suspended）
         const ensureRunning = this.audioCtx.state === 'suspended'
             ? this.audioCtx.resume() : Promise.resolve();
 
         ensureRunning.then(() => {
             if (this.currentBGM !== type) return;
+
+            // 已缓存的 AudioBuffer 直接播
+            if (this._bgmFileCache[type] instanceof AudioBuffer) {
+                this._playBufferBGM(type, this._bgmFileCache[type]);
+                return;
+            }
+            if (this._bgmFileCache[type] === 'unavailable') {
+                this._playProceduralBGM(type);
+                return;
+            }
+
+            // 用 fetch + decodeAudioData 加载 MP3，完全走 Web Audio API
             return fetch(`assets/audio/bgm_${type}.mp3`)
                 .then(r => { if (!r.ok) throw new Error('fetch failed'); return r.arrayBuffer(); })
                 .then(buf => Promise.race([
@@ -642,7 +643,6 @@ export default class AudioManager {
             this._bgmAudioElement = null;
         }
         if (this._bgmSourceNode) {
-            try { this._bgmSourceNode.loop = false; } catch (e) {}
             try { this._bgmSourceNode.stop(); } catch (e) {}
             try { this._bgmSourceNode.disconnect(); } catch (e) {}
             this._bgmSourceNode = null;
