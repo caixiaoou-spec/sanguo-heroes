@@ -119,8 +119,17 @@ export default class AudioManager {
     playBGM(type) {
         this.stopBGM();
         if (!this.audioCtx || this.muted) return;
-        this.resume();
-        this._playProceduralBGM(type);
+        this.currentBGM = type;
+
+        const play = () => {
+            if (this.currentBGM === type) this._playProceduralBGM(type);
+        };
+
+        if (this.audioCtx.state === 'suspended') {
+            this.audioCtx.resume().then(play).catch(play);
+        } else {
+            play();
+        }
     }
 
     // 用 AudioBufferSourceNode 循环播放已解码的音频
