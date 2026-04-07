@@ -131,29 +131,14 @@ export default class AudioManager {
         const audio = new Audio();
         audio.loop = true;
         audio.volume = this.bgmVolume;
+        audio.src = `assets/audio/bgm_${type}.mp3`;
 
-        let settled = false;
-
-        const onFail = () => {
-            if (settled) return;
-            settled = true;
+        this._bgmAudioElement = audio;
+        audio.play().catch(() => {
+            this._bgmAudioElement = null;
             this._bgmFileCache[type] = 'unavailable';
             if (this.currentBGM === type) this._playProceduralBGM(type);
-        };
-
-        audio.addEventListener('canplay', () => {
-            if (settled || this.currentBGM !== type) return;
-            settled = true;
-            clearTimeout(timer);
-            this._bgmAudioElement = audio;
-            audio.play().catch(onFail);
-        }, { once: true });
-
-        audio.addEventListener('error', onFail, { once: true });
-        const timer = setTimeout(onFail, 5000);
-
-        audio.src = `assets/audio/bgm_${type}.mp3`;
-        audio.load();
+        });
     }
 
     // Rich procedural BGM with multiple layers
