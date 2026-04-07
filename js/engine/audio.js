@@ -130,12 +130,28 @@ export default class AudioManager {
 
         const audio = new Audio();
         audio.loop = true;
-        audio.volume = this.bgmVolume;
         audio.src = `assets/audio/bgm_${type}.mp3`;
 
+        const bgmBus = this.audioCtx.createGain();
+        bgmBus.gain.value = this.bgmVolume;
+        bgmBus.connect(this.audioCtx.destination);
+
+        let source;
+        try {
+            source = this.audioCtx.createMediaElementSource(audio);
+        } catch (e) {
+            this._bgmFileCache[type] = 'unavailable';
+            this._playProceduralBGM(type);
+            return;
+        }
+        source.connect(bgmBus);
+
+        this._activeBgmBus = bgmBus;
         this._bgmAudioElement = audio;
+        this._bgmSourceNode = source;
+
         audio.play().catch(() => {
-            this._bgmAudioElement = null;
+            this.stopBGM();
             this._bgmFileCache[type] = 'unavailable';
             if (this.currentBGM === type) this._playProceduralBGM(type);
         });
