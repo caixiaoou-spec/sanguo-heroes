@@ -151,7 +151,13 @@ export default class AudioManager {
         this._bgmSourceNode = source;
 
         audio.play().catch(() => {
-            this.stopBGM();
+            // 只清理本次失败的资源，不调 stopBGM()（避免清掉 currentBGM 导致 fallback 失效）
+            if (this._bgmAudioElement === audio) this._bgmAudioElement = null;
+            if (this._bgmSourceNode === source) this._bgmSourceNode = null;
+            if (this._activeBgmBus === bgmBus) {
+                try { bgmBus.disconnect(); } catch (e) {}
+                this._activeBgmBus = null;
+            }
             this._bgmFileCache[type] = 'unavailable';
             if (this.currentBGM === type) this._playProceduralBGM(type);
         });
