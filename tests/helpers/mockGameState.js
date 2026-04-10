@@ -89,6 +89,7 @@ export function createMockGameState(overrides = {}) {
         skills,
         notifications: [],
         marches: [],
+        battleQueue: [],
         _marchIdCounter: 0,
 
         getCity(id) { return cities.find(c => c.id === id) || null; },
@@ -101,6 +102,9 @@ export function createMockGameState(overrides = {}) {
         getGeneralsOf(factionId) { return generals.filter(g => g.faction === factionId && g.status !== 'dead'); },
         getGeneralsInCity(cityId) {
             return generals.filter(g => g.city === cityId && g.status !== 'dead' && g.status !== 'captured');
+        },
+        getGarrisonCount(cityId) {
+            return generals.filter(g => g.city === cityId && g.status === 'idle').length;
         },
         getUnaffiliatedGenerals() { return generals.filter(g => g.faction === 'none' && g.status !== 'dead'); },
         getAliveFactions() { return factions.filter(f => f.alive); },

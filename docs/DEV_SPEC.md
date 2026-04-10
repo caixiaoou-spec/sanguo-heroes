@@ -1,7 +1,7 @@
 # 三国英雄 — 开发者功能规格文档 (PRD)
 
-> **版本**: v2.0
-> **日期**: 2026-03-28
+> **版本**: v2.1
+> **日期**: 2026-04-10
 > **用途**: 研发参考文档，描述各系统的输入/前置条件/效果/约束/返回值
 > **对应测试**: `tests/unit/` 下各 `.test.js` 文件
 
@@ -18,6 +18,8 @@
 7. [EventSystem — 事件系统](#7-eventsystem--事件系统)
 8. [全局约束与边界条件](#8-全局约束与边界条件)
 9. [架构重构（v2.0）](#9-架构重构v20)
+10. [BattleLogic — 战斗纯逻辑层](#10-battlelogic--战斗纯逻辑层)
+11. [WorldMapLogic — 大地图纯逻辑层](#11-worldmaplogic--大地图纯逻辑层)
 
 ---
 
@@ -846,3 +848,221 @@ new WorldMapLogic(gs, {
 ---
 
 *文档由代码逆向生成，与 `tests/unit/` 下单元测试保持同步。如修改逻辑，请同步更新对应测试和此文档。*
+
+---
+
+## 10. BattleLogic — 战斗纯逻辑层
+
+**文件**: `js/scenes/battle_logic.js`
+**测试**: `tests/unit/battle_logic.test.js`（29 个用例）
+
+通过 `new BattleLogic(scene)` 创建，`scene` 为 `BattleScene` 引用。所有方法无 canvas 依赖，可在 Node 环境测试。
+
+---
+
+### 10.1 `_getFormationPositions(formationId, generals, side)`
+
+**作用**: 计算阵型中每名将领的战场位置与随从士兵偏移。
+
+**输入**
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| formationId | string | `'arrow'` \| `'fish'` \| `'goose'` \| `'circle'` \| `'charge'` \| `'crane_wing'` |
+| generals | General[] | 参战将领列表 |
+| side | string | `'left'` \| `'right'` |
+
+**返回**: `Array<{ generalIndex, x, y, soldierOffsets }>`
+
+**约束**
+- 返回数组长度等于 `generals.length`
+- 未知阵型 fallback 到 `crane_wing`
+- 单将（`isDuel = count === 1`）时偏移量与多将不同
+
+| 阵型 | soldierOffsets 数量 |
+|------|---------------------|
+| `arrow` | 6 |
+| `fish` | 6 |
+| `goose` | 5 |
+| `circle` | 8 |
+| `charge` | 5 |
+| `crane_wing` | 6 |
+
+---
+
+### 10.2 `_getRetreatInfo()`
+
+**作用**: 判断当前玩家方是否可以撤退及撤退代价。
+
+**返回**: `{ canRetreat: boolean, label: string }`
+
+| 场景 | canRetreat | label |
+|------|------------|-------|
+| `_isRetreatBreakthrough = true` | true | 突围撤退 (损兵50%) |
+| 拦截战（`battle.isInterception`） | true | 撤退 (损兵25%) |
+| 普通战斗，玩家为进攻方 | true | 撤退 (损兵30%) |
+| 普通战斗，玩家为防守方，有其他城市 | true | 弃城撤退 (损兵40%) |
+| 普通战斗，玩家为防守方，无其他城市 | false | `''` |
+
+---
+
+### 10.3 `_handleInterceptionAfterBattle()`
+
+**作用**: 拦截战结束后，让胜方继续向原目标行军。
+
+**前置条件**: `battle.isInterception === true`
+
+**效果**
+- 遍历胜方存活将领，创建 `attack` 类型行军至原目标城
+- 败方由 `settleBattle` 已处理（撤回源城）
+
+---
+
+### 10.4 `_spawnDuelSoldiers(leftUnit, rightUnit)`
+
+**作用**: 在决斗开始时为双方生成士兵。
+
+**效果**
+- 清空 `battle.soldiers.left / right`
+- 左右各生成 `min(20, floor(unit.soldiers / 100))` 个士兵对象
+- 每个士兵含 `{ x, y, hp:3, state:'advance', type, speed:60, attackTimer }`
+
+---
+
+### 10.5 `_doRetreat()`
+
+**作用**: 执行玩家撤退，包含路径阻截检测。
+
+**路径阻截逻辑**（`findRetreatBlocker`）
+- BFS 先搜索只经过己方/中立城池的安全路径
+- 若不存在，BFS 全图搜最短路径，返回第一跳中的敌方城市 ID
+- 若存在阻截：创建 `isRetreatBreakthrough=true` 的 attack 行军至阻截城
+- 若无阻截：创建普通 `transfer` 行军撤回
+
+**撤退后副作用**
+- 攻方撤退：玩家将领 soldiers × 0.7；enemy 留守原城
+- 防守方弃城：enemy 占领该城（`owner` 改变）；玩家将领 soldiers × 0.6
+- 拦截战撤退：双方 soldiers × 0.75；enemy 继续原行军
+- 突围撤退：玩家将领 soldiers × 0.5；直接生成 transfer 行军至最终目的地
+
+---
+
+## 11. WorldMapLogic — 大地图纯逻辑层
+
+**文件**: `js/scenes/worldmap_logic.js`
+**测试**: `tests/unit/worldmap_logic.test.js`（36 个用例）
+
+通过 `new WorldMapLogic(gs, callbacks)` 创建，callbacks 包含：
+- `onTurnReport(text, type)` — 写入回合报告面板
+- `onMarchNote(text, timer)` — 写入行军通知横幅
+- `onBattleFlash(cityId, timer, text)` — 触发城市战斗闪光
+- `startNextBattle()` — 启动场景战斗队列中的下一场战斗
+
+---
+
+### 11.1 `_buildTimeline(currentTurn)`
+
+**作用**: 收集 `[currentTurn, currentTurn+1)` 内所有事件（meet / arrive）并排序。
+
+**排序规则**
+1. 按 `eventTurn` 升序
+2. 相同 `eventTurn`：`meet` 优先于 `arrive`
+
+**meet 事件 meetTurn 公式**
+```
+meetTurn = (A.travelTime × B.travelTime + A.departTurn × B.travelTime + B.departTurn × A.travelTime)
+           / (A.travelTime + B.travelTime)
+```
+仅当两军 `attack` 行军互为反向（`A.sourceCity === B.targetCity && A.targetCity === B.sourceCity`）时触发。
+
+---
+
+### 11.2 `_buildTimelineWindow(fromVT, toVT)`
+
+**作用**: `_buildTimeline` 的泛化版本，收集 `(fromVT, toVT]` 内事件。
+
+**边界**：`arrivalTurn > fromVT` 且 `arrivalTurn <= toVT`（左开右闭）
+
+---
+
+### 11.3 `_autoResolveBattle(attackerGenerals, defenderCityId, attackerFaction, attackerSourceCityId)`
+
+**作用**: AI vs AI 攻城自动结算。
+
+**战力公式**
+```
+power = Σ(gen.war + gen.lead + gen.soldiers × 0.01) × random(0.8, 1.2)
+defPower += defCity.defense × 0.5
+```
+
+**攻方胜利效果**
+- `defCity.owner = attackerFaction.id`，`defCity.soldiers = 0`
+- 攻方将领 soldiers × 0.7，进驻目标城
+- 守方将领 soldiers × 0.3，撤退（无城可退则归附攻方）
+- 守方势力城池归零 → `alive = false`
+
+**攻方失败效果**
+- 攻方将领 soldiers × 0.5，撤退至源城
+
+---
+
+### 11.4 `_autoResolveInterception(marchA, generalsA, marchB, generalsB)`
+
+**作用**: AI vs AI 野战自动结算。
+
+**效果**
+- 胜方 soldiers × 0.8，继续 attack 行军
+- 败方 soldiers × 0.4，生成 transfer 撤退行军
+
+---
+
+### 11.5 `_enterCity(gen, cityId)`
+
+**作用**: 将领进城，含驻守上限（`MAX_GARRISON = 12`）处理。
+
+**效果**
+- 从旧城移除 gen
+- 加入新城 generals 列表
+- `idleCount = gs.getGarrisonCount(cityId)` < 12 → `gen.status = 'idle'`
+- 满员且有空位友军城 → 转移行军到最近可用城（`gen.status = 'marching'`）
+- 满员且无可用城 → `gen.status = 'encamped'`
+
+---
+
+### 11.6 `_resolveArrival(march)`
+
+**作用**: 处理行军到达目标城。
+
+**返回**: `boolean`（`true` = 已触发战斗，需暂停后续事件）
+
+| 场景 | 行为 | 返回 |
+|------|------|------|
+| `transfer`，目标城已被敌占 | 重定向到最近友军城 | false |
+| `transfer`，正常到达 | `_enterCity` 进驻 | false |
+| `attack`，目标城已是己方 | `_enterCity` 进驻 | false |
+| `attack`，玩家参与，空城 | `_autoResolveBattle` 直接结算 | false |
+| `attack`，玩家参与，有守将 | push `battleQueue` | **true** |
+| `attack`，AI vs AI | `_autoResolveBattle` 直接结算 | false |
+| `attack`，突围行军（`isRetreatBreakthrough`） | 将领 city=null 驻守，push battleQueue | **true** |
+
+---
+
+### 11.7 `_resolveInterception(marchA, marchB)`
+
+**作用**: 处理两军相遇野战。
+
+**玩家参与时**: 推入 `battleQueue`（`isInterception: true`），玩家一侧为 attacker。
+
+**AI vs AI**: 调用 `_autoResolveInterception` 直接结算。
+
+---
+
+### 11.8 `_checkRealtimeEvents(prevVT, nowVT)`
+
+**作用**: 实时事件检测（update() 每帧调用），处理 `(prevVT, nowVT]` 内所有事件。
+
+**返回**: `boolean`（`true` = 有战斗入队，已调用 `startNextBattle`）
+
+**约束**
+- `prevVT >= nowVT` → 直接返回 `false`
+- 同窗口内所有事件全部处理完后，再统一触发一次 `startNextBattle`（避免多次切场景）
+- 已移除的行军不重复处理

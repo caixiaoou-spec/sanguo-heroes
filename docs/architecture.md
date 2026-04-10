@@ -1,7 +1,7 @@
 # 三国群英传 Web 复刻版 - 技术架构文档
 
-> 版本：v2.0
-> 更新日期：2026-03-28
+> 版本：v2.1
+> 更新日期：2026-04-10
 
 ---
 
@@ -64,11 +64,11 @@ sango-heroes/
 │   │   ├── menu.js                # 主菜单场景
 │   │   ├── factionSelect.js       # 势力选择场景
 │   │   ├── worldmap.js            # 大地图场景外壳（约 1289 行）
-│   │   ├── worldmap_logic.js      # 大地图纯逻辑层（约 618 行，NEW）
-│   │   ├── worldmap_renderer.js   # 大地图渲染层（约 1483 行，NEW）
-│   │   ├── battle.js              # 战斗场景外壳（约 925 行）
-│   │   ├── battle_logic.js        # 战斗纯逻辑层（约 464 行，NEW）
-│   │   └── battle_renderer.js     # 战斗渲染层（约 2606 行，NEW）
+│   │   ├── worldmap_logic.js      # 大地图纯逻辑层（660 行）
+│   │   ├── worldmap_renderer.js   # 大地图渲染层（1714 行）
+│   │   ├── battle.js              # 战斗场景外壳（947 行）
+│   │   ├── battle_logic.js        # 战斗纯逻辑层（553 行）
+│   │   └── battle_renderer.js     # 战斗渲染层（2595 行）
 │   ├── utils/                     # 工具层（全局共享工具）
 │   │   ├── constants.js           # 全局共享常量（NEW）
 │   │   └── generalUtils.js        # 武将属性计算工具函数（NEW）
@@ -87,8 +87,24 @@ sango-heroes/
 │   └── tiles/                     # 地形贴图（预留，当前程序化绘制）
 ├── tools/
 │   └── generate_portraits.html    # 头像批量生成工具
+├── tests/
+│   ├── helpers/
+│   │   └── mockGameState.js       # 测试工厂函数（含 battleQueue/getGarrisonCount）
+│   └── unit/
+│       ├── combat.test.js         # CombatSystem 单元测试
+│       ├── data.test.js           # 数据层完整性测试
+│       ├── diplomacy.test.js      # DiplomacySystem 单元测试
+│       ├── economy.test.js        # EconomySystem 单元测试
+│       ├── event.test.js          # EventSystem 单元测试
+│       ├── game.test.js           # GameState 单元测试
+│       ├── generalUtils.test.js   # generalUtils 单元测试
+│       ├── interception.test.js   # 行军拦截逻辑测试
+│       ├── timeline.test.js       # 时间轴系统测试
+│       ├── battle_logic.test.js   # BattleLogic 纯逻辑测试（NEW）
+│       └── worldmap_logic.test.js # WorldMapLogic 纯逻辑测试（NEW）
 └── docs/
     ├── requirements.md            # 需求功能文档
+    ├── DEV_SPEC.md                # 开发者功能规格文档
     └── architecture.md            # 技术架构文档
 ```
 
@@ -935,3 +951,27 @@ calcMaxMp(int)         → MP_BASE + int*2
 calcMarchTurns(dist)   → 1/2/3/4 基于距离阈值
 checkLevelUp(general, gameState)  → 合并自 economy.js 和 combat.js 的重复实现
 ```
+
+---
+
+## 12. 测试覆盖
+
+运行方式：`npm test`（Jest 30 + Babel）
+
+| 测试文件 | 覆盖目标 | 主要用例 |
+|----------|----------|----------|
+| `game.test.js` | `engine/game.js` | initNewGame、createMarch、checkVictory、Getter 方法 |
+| `economy.test.js` | `systems/economy.js` | develop/recruit/fortify/search/assignSoldiers/processTurn |
+| `diplomacy.test.js` | `systems/diplomacy.js` | formAlliance/declareWar/ceasefire/persuadeSurrender |
+| `combat.test.js` | `systems/combat.js` | 兵种克制、伤害公式、技能、结算、AI 拾将 |
+| `event.test.js` | `systems/event.js` | 事件条件判断、效果应用、choiceIndex 边界 |
+| `generalUtils.test.js` | `utils/generalUtils.js` | calcMaxHp/Mp、calcMarchTurns、checkLevelUp |
+| `data.test.js` | `data/*.js` | 城池/武将/势力/技能字段完整性与引用一致性 |
+| `interception.test.js` | 行军拦截逻辑 | _checkMarchInterceptions、_resolveInterception |
+| `timeline.test.js` | 时间轴系统 | _buildTimeline 事件顺序、meet/arrive 边界 |
+| `battle_logic.test.js` | `scenes/battle_logic.js` | 阵型位置、撤退条件/副作用、拦截战结算、士兵生成 |
+| `worldmap_logic.test.js` | `scenes/worldmap_logic.js` | 时间轴窗口、自动结算攻城/野战、_enterCity、行军到达、实时事件检测 |
+
+**不覆盖（依赖 Canvas/DOM）**：`renderer.js`、`audio.js`、`input.js`、`pinchzoom.js`、`save.js`、所有 `*_renderer.js`、`worldmap.js`、`battle.js`、`menu.js`、`factionSelect.js`、`main.js`。
+
+**mock 工厂**：`tests/helpers/mockGameState.js` 提供 `createMockGameState`（含 `battleQueue`、`getGarrisonCount`）、`createMockGeneral`、`createMockCity`、`createMockFaction`、`createMockBattle`、`createMockBattleUnit`。
