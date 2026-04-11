@@ -1041,7 +1041,7 @@ export class WorldMapRenderer {
 
         r.fillRect(px, py, pw, 30, 'rgba(90,58,16,0.8)');
         const scrollable = factions.length > maxVisible;
-        r.drawText(`外交${scrollable ? ' [滚轮翻页]' : ''}`, px + pw / 2, py + 15, {
+        r.drawText(`外交${scrollable ? ' [点击▲▼翻页]' : ''}`, px + pw / 2, py + 15, {
             color: '#ffe080', size: 19, align: 'center', baseline: 'middle', bold: true
         });
 

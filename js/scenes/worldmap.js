@@ -1019,6 +1019,25 @@ export default class WorldMapScene {
             return;
         }
 
+        // Up/down arrow click handling for touch devices
+        const scrollable = factions.length > 6;
+        const maxScroll2 = Math.max(0, factions.length - 6);
+        if (scrollable) {
+            const arrowX1 = px + pw - 50, arrowX2 = px + pw - 10;
+            if (this._diplomacyScroll > 0 &&
+                click.x >= arrowX1 && click.x <= arrowX2 &&
+                click.y >= py + 30 && click.y <= py + 56) {
+                this._diplomacyScroll = Math.max(0, this._diplomacyScroll - 1);
+                return;
+            }
+            if (this._diplomacyScroll < maxScroll2 &&
+                click.x >= arrowX1 && click.x <= arrowX2 &&
+                click.y >= py + 50 + visibleCount * 80 - 24 && click.y <= py + 50 + visibleCount * 80 + 8) {
+                this._diplomacyScroll = Math.min(maxScroll2, this._diplomacyScroll + 1);
+                return;
+            }
+        }
+
         // Faction buttons (with scroll offset)
         const maxVisible = 6;
         const startIdx = this._diplomacyScroll;
