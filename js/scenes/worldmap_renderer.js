@@ -1087,12 +1087,17 @@ export class WorldMapRenderer {
             }
         }
 
-        // Scroll indicators
+        // Scroll indicators — larger tap targets for touch/iPad
         if (startIdx > 0) {
-            r.drawText('▲', px + pw - 30, py + 42, { color: '#c8a850', size: 15, align: 'center' });
+            r.fillRect(px + pw - 54, py + 30, 44, 34, 'rgba(200,168,80,0.15)');
+            r.strokeRect(px + pw - 54, py + 30, 44, 34, '#c8a850');
+            r.drawText('▲', px + pw - 32, py + 47, { color: '#ffe080', size: 22, align: 'center', baseline: 'middle' });
         }
         if (startIdx + visibleCount < factions.length) {
-            r.drawText('▼', px + pw - 30, py + 50 + visibleCount * 80 - 8, { color: '#c8a850', size: 15, align: 'center' });
+            const arrowY = py + 50 + visibleCount * 80 - 4;
+            r.fillRect(px + pw - 54, arrowY - 17, 44, 34, 'rgba(200,168,80,0.15)');
+            r.strokeRect(px + pw - 54, arrowY - 17, 44, 34, '#c8a850');
+            r.drawText('▼', px + pw - 32, arrowY, { color: '#ffe080', size: 22, align: 'center', baseline: 'middle' });
         }
     }
 

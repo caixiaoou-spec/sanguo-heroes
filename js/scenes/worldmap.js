@@ -999,13 +999,34 @@ export default class WorldMapScene {
             this._diplomacyScroll = Math.max(0, Math.min(maxScroll, this._diplomacyScroll + (scroll > 0 ? 1 : -1)));
         }
 
-        const click = this.input.getClick();
-        if (!click) return;
-
+        // Touch drag-as-scroll for diplomacy panel
+        const drag = this.input.getDrag();
         const r = this.renderer;
         const px = r.width / 2 - 250;
         const py = 60;
         const pw = 500;
+        const factionsDrag = this.gs.getAliveFactions().filter(f => f.id !== this.gs.playerFaction);
+        const maxScrollDrag = Math.max(0, factionsDrag.length - 6);
+        if (drag && drag.startX >= px && drag.startX <= px + pw && drag.startY >= py) {
+            const deltaDy = drag.dy - this._dragLastDy;
+            this._dragLastDy = drag.dy;
+            this._dragScrollAccum += deltaDy;
+            const threshold = 30;
+            while (this._dragScrollAccum <= -threshold) {
+                this._diplomacyScroll = Math.min(maxScrollDrag, this._diplomacyScroll + 1);
+                this._dragScrollAccum += threshold;
+            }
+            while (this._dragScrollAccum >= threshold) {
+                this._diplomacyScroll = Math.max(0, this._diplomacyScroll - 1);
+                this._dragScrollAccum -= threshold;
+            }
+        } else if (!drag) {
+            this._dragLastDy = 0;
+            this._dragScrollAccum = 0;
+        }
+
+        const click = this.input.getClick();
+        if (!click) return;
         const factions = this.gs.getAliveFactions().filter(f => f.id !== this.gs.playerFaction);
         const visibleCount = Math.min(factions.length, 6);
         const ph = 50 + visibleCount * 80;
@@ -1019,20 +1040,22 @@ export default class WorldMapScene {
             return;
         }
 
-        // Up/down arrow click handling for touch devices
+        // Up/down arrow click handling for touch devices — enlarged hit zones
         const scrollable = factions.length > 6;
         const maxScroll2 = Math.max(0, factions.length - 6);
         if (scrollable) {
-            const arrowX1 = px + pw - 50, arrowX2 = px + pw - 10;
+            const arrowX1 = px + pw - 54, arrowX2 = px + pw - 10;
             if (this._diplomacyScroll > 0 &&
                 click.x >= arrowX1 && click.x <= arrowX2 &&
-                click.y >= py + 30 && click.y <= py + 56) {
+                click.y >= py + 30 && click.y <= py + 64) {
                 this._diplomacyScroll = Math.max(0, this._diplomacyScroll - 1);
                 return;
             }
+            const downY1 = py + 50 + visibleCount * 80 - 21;
+            const downY2 = downY1 + 34;
             if (this._diplomacyScroll < maxScroll2 &&
                 click.x >= arrowX1 && click.x <= arrowX2 &&
-                click.y >= py + 50 + visibleCount * 80 - 24 && click.y <= py + 50 + visibleCount * 80 + 8) {
+                click.y >= downY1 && click.y <= downY2) {
                 this._diplomacyScroll = Math.min(maxScroll2, this._diplomacyScroll + 1);
                 return;
             }
